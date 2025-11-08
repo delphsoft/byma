@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BYMA Stocks Tracker</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const TrendingUp = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        );
+
+        const TrendingDown = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                <polyline points="17 18 23 18 23 12"></polyline>
+            </svg>
+        );
+
+        const RefreshCw = ({ className }) => (
+            <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+        );
+
+        const AlertCircle = ({ className }) => (
+            <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        );
+
+        const DollarSign = ({ className }) => (
+            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        );
+
+        const BYMAStocksTracker = () => {
+            const [stocks, setStocks] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [lastUpdate, setLastUpdate] = useState(null);
+            const [sortBy, setSortBy] = useState('variation');
+            const [filterStrategy, setFilterStrategy] = useState('all');
+
+            const sampleStocks = [
+                { ticker: 'GGAL', name: 'Grupo Financiero Galicia', sector: 'Financiero', price: 580.50, prevClose: 565.00 },
+                { ticker: 'YPF', name: 'YPF Sociedad Anónima', sector: 'Energía', price: 425.80, prevClose: 438.20 },
+                { ticker: 'PAMP', name: 'Pampa Energía', sector: 'Energía', price: 310.25, prevClose: 295.00 },
+                { ticker: 'BMA', name: 'Banco Macro', sector: 'Financiero', price: 892.40, prevClose: 870.00 },
+                { ticker: 'VIST', name: 'Vista Energy', sector: 'Energía', price: 156.70, prevClose: 160.50 },
+                { ticker: 'TXAR', name: 'Ternium Argentina', sector: 'Siderurgia', price: 201.30, prevClose: 198.00 },
+                { ticker: 'ALUA', name: 'Aluar Aluminio Argentino', sector: 'Metalurgia', price: 178.90, prevClose: 185.40 },
+                { ticker: 'LOMA', name: 'Loma Negra', sector: 'Construcción', price: 125.60, prevClose: 122.30 },
+                { ticker: 'TGSU2', name: 'Transportadora de Gas del Sur', sector: 'Energía', price: 267.80, prevClose: 255.00 },
+                { ticker: 'EDN', name: 'Edenor', sector: 'Servicios', price: 89.45, prevClose: 92.10 },
+            ];
+
+            const calculateMetrics = (stock) => {
+                const variation = ((stock.price - stock.prevClose) / stock.prevClose) * 100;
+                const volatility = Math.abs(variation);
+                const sma20 = stock.price * (1 - (Math.random() * 0.05 - 0.025));
+                const sma50 = stock.price * (1 - (Math.random() * 0.08 - 0.04));
+                const rsi = variation > 0 ? 50 + Math.random() * 30 : 20 + Math.random() * 30;
+                
+                return { variation, volatility, sma20, sma50, rsi };
+            };
+
+            const determineStrategy = (stock, metrics) => {
+                const { variation, rsi, sma20, sma50 } = metrics;
+                
+                if (rsi < 30 && stock.price < sma20) {
+                    return {
+                        type: 'BUY',
+                        signal: 'Sobreventa',
+                        entry: stock.price * 0.98,
+                        target: stock.price * 1.08,
+                        stop: stock.price * 0.95,
+                        confidence: 'Alta',
+                        reasoning: 'RSI sobreventa + precio bajo SMA20'
+                    };
+                }
+                
+                if (rsi > 70 && stock.price > sma20) {
+                    return {
+                        type: 'SELL',
+                        signal: 'Sobrecompra',
+                        entry: stock.price * 1.02,
+                        target: stock.price * 0.92,
+                        stop: stock.price * 1.05,
+                        confidence: 'Alta',
+                        reasoning: 'RSI sobrecompra + precio alto SMA20'
+                    };
+                }
+                
+                if (stock.price > sma20 && sma20 > sma50 && variation > 1) {
+                    return {
+                        type: 'BUY',
+                        signal: 'Tendencia Alcista',
+                        entry: stock.price * 0.99,
+                        target: stock.price * 1.12,
+                        stop: stock.price * 0.93,
+                        confidence: 'Media',
+                        reasoning: 'Tendencia alcista confirmada'
+                    };
+                }
+                
+                if (stock.price < sma20 && sma20 < sma50 && variation < -1) {
+                    return {
+                        type: 'SELL',
+                        signal: 'Tendencia Bajista',
+                        entry: stock.price * 1.01,
+                        target: stock.price * 0.88,
+                        stop: stock.price * 1.07,
+                        confidence: 'Media',
+                        reasoning: 'Tendencia bajista confirmada'
+                    };
+                }
+                
+                return {
+                    type: 'HOLD',
+                    signal: 'Neutral',
+                    entry: stock.price,
+                    target: stock.price * 1.05,
+                    stop: stock.price * 0.97,
+                    confidence: 'Baja',
+                    reasoning: 'Sin señal clara de entrada'
+                };
+            };
+
+            const loadStocks = () => {
+                setLoading(true);
+                
+                setTimeout(() => {
+                    const enrichedStocks = sampleStocks.map(stock => {
+                        const metrics = calculateMetrics(stock);
+                        const strategy = determineStrategy(stock, metrics);
+                        
+                        return {
+                            ...stock,
+                            ...metrics,
+                            strategy
+                        };
+                    });
+                    
+                    setStocks(enrichedStocks);
+                    setLastUpdate(new Date());
+                    setLoading(false);
+                }, 1000);
+            };
+
+            useEffect(() => {
+                loadStocks();
+            }, []);
+
+            const sortedStocks = [...stocks].sort((a, b) => {
+                if (sortBy === 'variation') return b.variation - a.variation;
+                if (sortBy === 'price') return b.price - a.price;
+                if (sortBy === 'ticker') return a.ticker.localeCompare(b.ticker);
+                return 0;
+            });
+
+            const filteredStocks = sortedStocks.filter(stock => {
+                if (filterStrategy === 'all') return true;
+                return stock.strategy.type === filterStrategy;
+            });
+
+            const getVariationColor = (variation) => {
+                if (variation > 2) return 'text-green-600 bg-green-50';
+                if (variation > 0) return 'text-green-500 bg-green-50';
+                if (variation < -2) return 'text-red-600 bg-red-50';
+                return 'text-red-500 bg-red-50';
+            };
+
+            const getStrategyColor = (type) => {
+                if (type === 'BUY') return 'bg-green-100 text-green-800 border-green-300';
+                if (type === 'SELL') return 'bg-red-100 text-red-800 border-red-300';
+                return 'bg-gray-100 text-gray-800 border-gray-300';
+            };
+
+            return (
+                <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                                        <DollarSign className="text-indigo-600" />
+                                        BYMA Stocks Tracker
+                                    </h1>
+                                    <p className="text-gray-600 mt-1">Mercado de Valores de Buenos Aires</p>
+                                </div>
+                                <button
+                                    onClick={loadStocks}
+                                    disabled={loading}
+                                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                                >
+                                    <RefreshCw className={loading ? 'animate-spin' : ''} />
+                                    Actualizar
+                                </button>
+                            </div>
+                            
+                            {lastUpdate && (
+                                <p className="text-sm text-gray-500">
+                                    Última actualización: {lastUpdate.toLocaleTimeString('es-AR')}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+                            <div className="flex flex-wrap gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Ordenar por:
+                                    </label>
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <option value="variation">Variación %</option>
+                                        <option value="price">Precio</option>
+                                        <option value="ticker">Ticker</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Filtrar estrategia:
+                                    </label>
+                                    <select
+                                        value={filterStrategy}
+                                        onChange={(e) => setFilterStrategy(e.target.value)}
+                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <option value="all">Todas</option>
+                                        <option value="BUY">Compra</option>
+                                        <option value="SELL">Venta</option>
+                                        <option value="HOLD">Mantener</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-indigo-600 text-white">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold">Ticker</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold">Empresa</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold">Precio</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold">Variación %</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold">RSI</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold">Estrategia</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold">Entrada</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold">Objetivo</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold">Stop Loss</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {filteredStocks.map((stock, idx) => (
+                                            <tr key={stock.ticker} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="px-4 py-4">
+                                                    <span className="font-bold text-indigo-600">{stock.ticker}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div>
+                                                        <div className="font-medium text-gray-900">{stock.name}</div>
+                                                        <div className="text-xs text-gray-500">{stock.sector}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-right font-semibold">
+                                                    ${stock.price.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-4 text-right">
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded ${getVariationColor(stock.variation)}`}>
+                                                        {stock.variation > 0 ? <TrendingUp /> : <TrendingDown />}
+                                                        {stock.variation.toFixed(2)}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className={`px-2 py-1 rounded text-sm ${
+                                                        stock.rsi < 30 ? 'bg-green-100 text-green-800' :
+                                                        stock.rsi > 70 ? 'bg-red-100 text-red-800' :
+                                                        'bg-gray-100 text-gray-800'
+                                                    }`}>
+                                                        {stock.rsi.toFixed(0)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className={`border rounded-lg p-2 ${getStrategyColor(stock.strategy.type)}`}>
+                                                        <div className="font-bold text-center">{stock.strategy.type}</div>
+                                                        <div className="text-xs text-center mt-1">{stock.strategy.signal}</div>
+                                                        <div className="text-xs mt-1 opacity-75">{stock.strategy.reasoning}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-sm">
+                                                    ${stock.strategy.entry.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-sm text-green-600 font-medium">
+                                                    ${stock.strategy.target.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-sm text-red-600 font-medium">
+                                                    ${stock.strategy.stop.toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                <AlertCircle className="text-indigo-600" />
+                                Leyenda de Estrategias
+                            </h3>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 className="font-semibold text-green-700 mb-2">Señales de Compra (BUY)</h4>
+                                    <ul className="text-sm text-gray-600 space-y-1">
+                                        <li>• <strong>Sobreventa:</strong> RSI &lt; 30 y precio bajo SMA20</li>
+                                        <li>• <strong>Tendencia Alcista:</strong> Precio &gt; SMA20 &gt; SMA50</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-red-700 mb-2">Señales de Venta (SELL)</h4>
+                                    <ul className="text-sm text-gray-600 space-y-1">
+                                        <li>• <strong>Sobrecompra:</strong> RSI &gt; 70 y precio alto SMA20</li>
+                                        <li>• <strong>Tendencia Bajista:</strong> Precio &lt; SMA20 &lt; SMA50</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-4 italic">
+                                <strong>Disclaimer:</strong> Esta herramienta es solo para fines educativos y de demostración. 
+                                Los datos mostrados son simulados. Siempre consulte con un asesor financiero antes de tomar decisiones de inversión.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<BYMAStocksTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
