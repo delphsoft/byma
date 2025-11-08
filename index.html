@@ -15,51 +15,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const TrendingUp = () => (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                <polyline points="17 6 23 6 23 12"></polyline>
-            </svg>
-        );
-
-        const TrendingDown = () => (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                <polyline points="17 18 23 18 23 12"></polyline>
-            </svg>
-        );
-
-        const RefreshCw = ({ className }) => (
-            <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <polyline points="1 20 1 14 7 14"></polyline>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-        );
-
-        const AlertCircle = ({ className }) => (
-            <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-        );
-
-        const DollarSign = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="1" x2="12" y2="23"></line>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
-        );
-
-        const Globe = ({ className }) => (
-            <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-            </svg>
-        );
-
         const BYMAStocksTracker = () => {
             const [stocks, setStocks] = useState([]);
             const [loading, setLoading] = useState(false);
@@ -81,7 +36,6 @@
                 { ticker: 'TGSU2', name: 'Transportadora de Gas del Sur', sector: 'Energía', price: 267.80, prevClose: 255.00, type: 'local' },
                 { ticker: 'EDN', name: 'Edenor', sector: 'Servicios', price: 89.45, prevClose: 92.10, type: 'local' },
                 
-                // CEDEARs
                 { ticker: 'AAPL', name: 'Apple Inc.', sector: 'Tecnología', price: 18450.00, prevClose: 18200.00, type: 'cedear', country: 'USA', ratio: '10:1' },
                 { ticker: 'GOOGL', name: 'Alphabet Inc.', sector: 'Tecnología', price: 15280.00, prevClose: 15450.00, type: 'cedear', country: 'USA', ratio: '10:1' },
                 { ticker: 'MSFT', name: 'Microsoft Corporation', sector: 'Tecnología', price: 22100.00, prevClose: 21850.00, type: 'cedear', country: 'USA', ratio: '5:1' },
@@ -95,7 +49,6 @@
                 { ticker: 'GOLD', name: 'Barrick Gold Corporation', sector: 'Minería', price: 1850.00, prevClose: 1820.00, type: 'cedear', country: 'Canadá', ratio: '1:1' },
                 { ticker: 'MELI', name: 'MercadoLibre Inc.', sector: 'E-commerce', price: 24500.00, prevClose: 23900.00, type: 'cedear', country: 'Argentina', ratio: '10:1' },
                 
-                // Galpones (High Growth/Speculative)
                 { ticker: 'HOOD', name: 'Robinhood Markets Inc.', sector: 'Fintech', price: 3280.00, prevClose: 3150.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
                 { ticker: 'CRWD', name: 'CrowdStrike Holdings Inc.', sector: 'Ciberseguridad', price: 38900.00, prevClose: 39500.00, type: 'cedear', country: 'USA', ratio: '10:1', category: 'galpones' },
                 { ticker: 'OKLO', name: 'Oklo Inc.', sector: 'Energía Nuclear', price: 1580.00, prevClose: 1450.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
@@ -105,211 +58,108 @@
 
             const calculateMetrics = (stock) => {
                 const variation = ((stock.price - stock.prevClose) / stock.prevClose) * 100;
-                const volatility = Math.abs(variation);
                 const sma20 = stock.price * (1 - (Math.random() * 0.05 - 0.025));
                 const sma50 = stock.price * (1 - (Math.random() * 0.08 - 0.04));
                 const rsi = variation > 0 ? 50 + Math.random() * 30 : 20 + Math.random() * 30;
+                const high52w = stock.price * (1 + Math.random() * 0.15 + 0.05);
+                const low52w = stock.price * (1 - Math.random() * 0.15 - 0.05);
+                const atr = stock.price * (0.02 + Math.random() * 0.03);
                 
-                // Simular datos históricos para cálculos más avanzados
-                const high52w = stock.price * (1 + Math.random() * 0.15 + 0.05); // +5% a +20%
-                const low52w = stock.price * (1 - Math.random() * 0.15 - 0.05);  // -5% a -20%
-                const atr = stock.price * (0.02 + Math.random() * 0.03); // ATR entre 2-5% del precio
-                
-                return { variation, volatility, sma20, sma50, rsi, high52w, low52w, atr };
-            };
-
-            const calculateAdvancedTargets = (stock, metrics) => {
-                const { rsi, sma20, sma50, high52w, low52w, atr } = metrics;
-                const price = stock.price;
-                
-                // Método 1: Fibonacci (basado en rango histórico)
-                const fibRange = high52w - low52w;
-                const fib618 = price + (fibRange * 0.618 * 0.15); // Escalado
-                const fib382 = price - (fibRange * 0.382 * 0.15);
-                
-                // Método 2: ATR (basado en volatilidad)
-                const atrTarget = price + (atr * 2.5);
-                const atrStop = price - (atr * 1.5);
-                
-                // Método 3: Soportes/Resistencias (SMA + extremos)
-                const resistance = Math.max(sma50 * 1.05, high52w * 0.95);
-                const support = Math.min(sma50 * 0.95, low52w * 1.05);
-                
-                // Método 4: Risk/Reward basado en RSI
-                let riskRewardMultiplier = 2;
-                if (rsi < 25) riskRewardMultiplier = 3; // Mayor potencial en sobreventa extrema
-                if (rsi > 75) riskRewardMultiplier = 1.5; // Menor potencial en sobrecompra extrema
-                
-                return {
-                    fib618, fib382, atrTarget, atrStop, resistance, support, riskRewardMultiplier
-                };
+                return { variation, sma20, sma50, rsi, high52w, low52w, atr };
             };
 
             const determineStrategy = (stock, metrics) => {
-                const { variation, rsi, sma20, sma50 } = metrics;
+                const { variation, rsi, sma20, sma50, high52w, low52w, atr } = metrics;
                 const price = stock.price;
-                const targets = calculateAdvancedTargets(stock, metrics);
                 
-                // Cálculo simple (método original)
-                let simpleTarget, simpleStop;
+                const fibRange = high52w - low52w;
+                const fib618 = price + (fibRange * 0.618 * 0.15);
+                const fib382 = price - (fibRange * 0.382 * 0.15);
+                const atrTarget = price + (atr * 2.5);
+                const atrStop = price - (atr * 1.5);
+                const resistance = Math.max(sma50 * 1.05, high52w * 0.95);
+                const support = Math.min(sma50 * 0.95, low52w * 1.05);
+                let riskRewardMultiplier = 2;
+                if (rsi < 25) riskRewardMultiplier = 3;
+                if (rsi > 75) riskRewardMultiplier = 1.5;
                 
-                // Señal de COMPRA - Sobreventa fuerte
+                let simpleTarget, simpleStop, target, stop, type, signal, reasoning, methods;
+                
                 if (rsi < 30 && price < sma20) {
                     simpleTarget = price * 1.08;
                     simpleStop = price * 0.95;
-                    
-                    const stop = Math.max(targets.fib382, targets.atrStop, targets.support);
+                    stop = Math.max(fib382, atrStop, support);
                     const riskPerShare = price - stop;
-                    const rewardPerShare = riskPerShare * targets.riskRewardMultiplier;
-                    const target = Math.min(
-                        price + rewardPerShare,
-                        targets.fib618,
-                        targets.resistance
-                    );
-                    
-                    return {
-                        type: 'BUY',
-                        signal: 'Sobreventa',
-                        entry: price * 0.98,
-                        target: target,
-                        targetSimple: simpleTarget,
-                        stop: stop,
-                        stopSimple: simpleStop,
-                        confidence: 'Alta',
-                        reasoning: 'RSI sobreventa + múltiples soportes confirmados',
-                        methods: 'Fibonacci + ATR + Risk/Reward 1:' + targets.riskRewardMultiplier
-                    };
-                }
-                
-                // Señal de COMPRA - Tendencia Alcista
-                if (price > sma20 && sma20 > sma50 && variation > 1) {
+                    target = Math.min(price + (riskPerShare * riskRewardMultiplier), fib618, resistance);
+                    type = 'BUY';
+                    signal = 'Sobreventa';
+                    reasoning = 'RSI sobreventa + soportes confirmados';
+                    methods = 'Fibonacci + ATR + R/R 1:' + riskRewardMultiplier;
+                } else if (price > sma20 && sma20 > sma50 && variation > 1) {
                     simpleTarget = price * 1.12;
                     simpleStop = price * 0.93;
-                    
-                    const stop = Math.max(sma20 * 0.97, targets.atrStop);
+                    stop = Math.max(sma20 * 0.97, atrStop);
                     const riskPerShare = price - stop;
-                    const target = Math.min(
-                        price + (riskPerShare * 2.5),
-                        targets.atrTarget,
-                        targets.resistance
-                    );
-                    
-                    return {
-                        type: 'BUY',
-                        signal: 'Tendencia Alcista',
-                        entry: price * 0.995,
-                        target: target,
-                        targetSimple: simpleTarget,
-                        stop: stop,
-                        stopSimple: simpleStop,
-                        confidence: 'Media-Alta',
-                        reasoning: 'Precio sobre SMAs + momentum positivo',
-                        methods: 'SMA + ATR + Resistencias técnicas'
-                    };
-                }
-                
-                // Señal de VENTA - Sobrecompra
-                if (rsi > 70 && price > sma20) {
+                    target = Math.min(price + (riskPerShare * 2.5), atrTarget, resistance);
+                    type = 'BUY';
+                    signal = 'Tendencia Alcista';
+                    reasoning = 'Precio sobre SMAs + momentum positivo';
+                    methods = 'SMA + ATR + Resistencias';
+                } else if (rsi > 70 && price > sma20) {
                     simpleTarget = price * 0.92;
                     simpleStop = price * 1.05;
-                    
-                    const stop = Math.min(targets.fib618, price * 1.05);
+                    stop = Math.min(fib618, price * 1.05);
                     const riskPerShare = stop - price;
-                    const target = Math.max(
-                        price - (riskPerShare * targets.riskRewardMultiplier),
-                        targets.support,
-                        sma50
-                    );
-                    
-                    return {
-                        type: 'SELL',
-                        signal: 'Sobrecompra',
-                        entry: price * 1.02,
-                        target: target,
-                        targetSimple: simpleTarget,
-                        stop: stop,
-                        stopSimple: simpleStop,
-                        confidence: 'Alta',
-                        reasoning: 'RSI sobrecompra + resistencia técnica alcanzada',
-                        methods: 'Fibonacci + Soportes + Risk/Reward'
-                    };
-                }
-                
-                // Señal de VENTA - Tendencia Bajista
-                if (price < sma20 && sma20 < sma50 && variation < -1) {
+                    target = Math.max(price - (riskPerShare * riskRewardMultiplier), support, sma50);
+                    type = 'SELL';
+                    signal = 'Sobrecompra';
+                    reasoning = 'RSI sobrecompra + resistencia alcanzada';
+                    methods = 'Fibonacci + Soportes + R/R';
+                } else if (price < sma20 && sma20 < sma50 && variation < -1) {
                     simpleTarget = price * 0.88;
                     simpleStop = price * 1.07;
-                    
-                    const stop = Math.min(sma20 * 1.03, price * 1.07);
+                    stop = Math.min(sma20 * 1.03, price * 1.07);
                     const riskPerShare = stop - price;
-                    const target = Math.max(
-                        price - (riskPerShare * 2),
-                        targets.support,
-                        targets.low52w * 1.05
-                    );
-                    
-                    return {
-                        type: 'SELL',
-                        signal: 'Tendencia Bajista',
-                        entry: price * 1.01,
-                        target: target,
-                        targetSimple: simpleTarget,
-                        stop: stop,
-                        stopSimple: simpleStop,
-                        confidence: 'Media',
-                        reasoning: 'Precio bajo SMAs + momentum negativo',
-                        methods: 'SMA + Soportes históricos + ATR'
-                    };
+                    target = Math.max(price - (riskPerShare * 2), support, low52w * 1.05);
+                    type = 'SELL';
+                    signal = 'Tendencia Bajista';
+                    reasoning = 'Precio bajo SMAs + momentum negativo';
+                    methods = 'SMA + Soportes + ATR';
+                } else {
+                    simpleTarget = price * 1.05;
+                    simpleStop = price * 0.97;
+                    stop = price * 0.97;
+                    target = Math.min(price * 1.05, resistance * 0.98);
+                    type = 'HOLD';
+                    signal = 'Neutral';
+                    reasoning = 'Sin señal clara';
+                    methods = 'Niveles conservadores';
                 }
                 
-                // HOLD - Sin señal clara
-                simpleTarget = price * 1.05;
-                simpleStop = price * 0.97;
-                
-                const neutralStop = price * 0.97;
-                const neutralTarget = Math.min(
-                    price * 1.05,
-                    targets.resistance * 0.98
-                );
-                
                 return {
-                    type: 'HOLD',
-                    signal: 'Neutral',
-                    entry: price,
-                    target: neutralTarget,
-                    targetSimple: simpleTarget,
-                    stop: neutralStop,
-                    stopSimple: simpleStop,
-                    confidence: 'Baja',
-                    reasoning: 'Sin señal clara - mercado en rango',
-                    methods: 'Niveles técnicos conservadores'
+                    type, signal, reasoning, methods,
+                    entry: price * (type === 'BUY' ? 0.99 : 1.01),
+                    target, targetSimple: simpleTarget,
+                    stop, stopSimple: simpleStop,
+                    confidence: type === 'HOLD' ? 'Baja' : 'Alta'
                 };
             };
 
             const loadStocks = () => {
                 setLoading(true);
-                
                 setTimeout(() => {
                     const enrichedStocks = sampleStocks.map(stock => {
                         const metrics = calculateMetrics(stock);
                         const strategy = determineStrategy(stock, metrics);
-                        
-                        return {
-                            ...stock,
-                            ...metrics,
-                            strategy
-                        };
+                        return { ...stock, ...metrics, strategy };
                     });
-                    
                     setStocks(enrichedStocks);
                     setLastUpdate(new Date());
                     setLoading(false);
                 }, 1000);
             };
 
-            useEffect(() => {
-                loadStocks();
-            }, []);
+            useEffect(() => { loadStocks(); }, []);
 
             const sortedStocks = [...stocks].sort((a, b) => {
                 if (sortBy === 'variation') return b.variation - a.variation;
@@ -324,19 +174,6 @@
                 const galponesMatch = !showGalpones || stock.category === 'galpones';
                 return strategyMatch && typeMatch && galponesMatch;
             });
-
-            const getVariationColor = (variation) => {
-                if (variation > 2) return 'text-green-600 bg-green-50';
-                if (variation > 0) return 'text-green-500 bg-green-50';
-                if (variation < -2) return 'text-red-600 bg-red-50';
-                return 'text-red-500 bg-red-50';
-            };
-
-            const getStrategyColor = (type) => {
-                if (type === 'BUY') return 'bg-green-100 text-green-800 border-green-300';
-                if (type === 'SELL') return 'bg-red-100 text-red-800 border-red-300';
-                return 'bg-gray-100 text-gray-800 border-gray-300';
-            };
 
             const stats = {
                 total: stocks.length,
@@ -353,10 +190,7 @@
                         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                                        <DollarSign className="text-indigo-600" />
-                                        BYMA Stocks & CEDEARs Tracker
-                                    </h1>
+                                    <h1 className="text-3xl font-bold text-gray-800">BYMA Stocks & CEDEARs Tracker</h1>
                                     <p className="text-gray-600 mt-1">Mercado de Valores de Buenos Aires</p>
                                 </div>
                                 <button
@@ -364,8 +198,7 @@
                                     disabled={loading}
                                     className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
                                 >
-                                    <RefreshCw className={loading ? 'animate-spin' : ''} />
-                                    Actualizar
+                                    🔄 {loading ? 'Cargando...' : 'Actualizar'}
                                 </button>
                             </div>
                             
@@ -375,31 +208,30 @@
                                 </p>
                             )}
 
-                            {/* Stats */}
                             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
                                 <div className="bg-blue-50 rounded-lg p-3">
                                     <div className="text-xs text-blue-600 font-medium">Total Activos</div>
                                     <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
                                 </div>
                                 <div className="bg-green-50 rounded-lg p-3">
-                                    <div className="text-xs text-green-600 font-medium">Acciones Locales</div>
+                                    <div className="text-xs text-green-600 font-medium">Locales</div>
                                     <div className="text-2xl font-bold text-green-700">{stats.local}</div>
                                 </div>
                                 <div className="bg-purple-50 rounded-lg p-3">
                                     <div className="text-xs text-purple-600 font-medium">CEDEARs</div>
                                     <div className="text-2xl font-bold text-purple-700">{stats.cedear}</div>
                                 </div>
-                                <div className="bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100 transition" onClick={() => setShowGalpones(!showGalpones)}>
+                                <div className="bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100" onClick={() => setShowGalpones(!showGalpones)}>
                                     <div className="text-xs text-orange-600 font-medium">🚀 Galpones</div>
                                     <div className="text-2xl font-bold text-orange-700">{stats.galpones}</div>
-                                    {showGalpones && <div className="text-xs text-orange-600 mt-1">✓ Filtrado</div>}
+                                    {showGalpones && <div className="text-xs text-orange-600">✓ Activo</div>}
                                 </div>
                                 <div className="bg-emerald-50 rounded-lg p-3">
-                                    <div className="text-xs text-emerald-600 font-medium">Señales Compra</div>
+                                    <div className="text-xs text-emerald-600 font-medium">Compra</div>
                                     <div className="text-2xl font-bold text-emerald-700">{stats.buySignals}</div>
                                 </div>
                                 <div className="bg-red-50 rounded-lg p-3">
-                                    <div className="text-xs text-red-600 font-medium">Señales Venta</div>
+                                    <div className="text-xs text-red-600 font-medium">Venta</div>
                                     <div className="text-2xl font-bold text-red-700">{stats.sellSignals}</div>
                                 </div>
                             </div>
@@ -407,68 +239,140 @@
 
                         <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
                             <div className="flex flex-wrap gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Tipo de activo:
-                                    </label>
-                                    <select
-                                        value={assetType}
-                                        onChange={(e) => setAssetType(e.target.value)}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="all">Todos</option>
-                                        <option value="local">Acciones Locales</option>
-                                        <option value="cedear">CEDEARs</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Ordenar por:
-                                    </label>
-                                    <select
-                                        value={sortBy}
-                                        onChange={(e) => setSortBy(e.target.value)}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="variation">Variación %</option>
-                                        <option value="price">Precio</option>
-                                        <option value="ticker">Ticker</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Filtrar estrategia:
-                                    </label>
-                                    <select
-                                        value={filterStrategy}
-                                        onChange={(e) => setFilterStrategy(e.target.value)}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="all">Todas</option>
-                                        <option value="BUY">Compra</option>
-                                        <option value="SELL">Venta</option>
-                                        <option value="HOLD">Mantener</option>
-                                    </select>
-                                </div>
+                                <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className="px-4 py-2 border rounded-lg">
+                                    <option value="all">Todos los activos</option>
+                                    <option value="local">Acciones Locales</option>
+                                    <option value="cedear">CEDEARs</option>
+                                </select>
+                                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-4 py-2 border rounded-lg">
+                                    <option value="variation">Ordenar por Variación</option>
+                                    <option value="price">Ordenar por Precio</option>
+                                    <option value="ticker">Ordenar por Ticker</option>
+                                </select>
+                                <select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)} className="px-4 py-2 border rounded-lg">
+                                    <option value="all">Todas las estrategias</option>
+                                    <option value="BUY">Solo Compra</option>
+                                    <option value="SELL">Solo Venta</option>
+                                    <option value="HOLD">Solo Mantener</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-indigo-600 text-white">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-sm font-semibold">Ticker</th>
-                                            <th className="px-4 py-3 text-left text-sm font-semibold">Empresa</th>
-                                            <th className="px-4 py-3 text-center text-sm font-semibold">Tipo</th>
-                                            <th className="px-4 py-3 text-right text-sm font-semibold">Precio</th>
-                                            <th className="px-4 py-3 text-right text-sm font-semibold">Variación %</th>
-                                            <th className="px-4 py-3 text-center text-sm font-semibold">RSI</th>
-                                            <th className="px-4 py-3 text-center text-sm font-semibold">Estrategia</th>
-                                            <th className="px-4 py-3 text-right text-sm font-semibold">Entrada</th>
-                                            <th className="px-4 py-3 text-right text-sm font-semibold">Objetivo Simple</th>
-                                            <th className="px-4 py-3 text-center text-sm font-semibold">% a Objetivo Simple</th>
-                                            <th className="px-4 py-3 text-right text-sm font-semibold">Objetivo Robusto</th>
-                                            <th className="px-4 py-3 text-center text-sm font-semibold">% a Objetivo Robusto</th>
-                                            <th className="px-4 py-3 text-right text-
+                        <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-indigo-600 text-white">
+                                    <tr>
+                                        <th className="px-3 py-2 text-left">Ticker</th>
+                                        <th className="px-3 py-2 text-left">Empresa</th>
+                                        <th className="px-3 py-2">Tipo</th>
+                                        <th className="px-3 py-2 text-right">Precio</th>
+                                        <th className="px-3 py-2 text-right">Var%</th>
+                                        <th className="px-3 py-2">RSI</th>
+                                        <th className="px-3 py-2">Estrategia</th>
+                                        <th className="px-3 py-2 text-right">Entrada</th>
+                                        <th className="px-3 py-2 text-right">Obj Simple</th>
+                                        <th className="px-3 py-2">% Obj S</th>
+                                        <th className="px-3 py-2 text-right">Obj Robusto</th>
+                                        <th className="px-3 py-2">% Obj R</th>
+                                        <th className="px-3 py-2 text-right">Stop S</th>
+                                        <th className="px-3 py-2 text-right">Stop R</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredStocks.map((s, i) => {
+                                        const pctSimple = ((s.strategy.targetSimple - s.price) / s.price * 100);
+                                        const pctRobust = ((s.strategy.target - s.price) / s.price * 100);
+                                        return (
+                                            <tr key={s.ticker} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="px-3 py-3">
+                                                    <div className="font-bold text-indigo-600">{s.ticker}</div>
+                                                    {s.ratio && <div className="text-xs text-gray-500">{s.ratio}</div>}
+                                                    {s.category === 'galpones' && <div className="text-xs text-orange-600 font-bold">🚀 GALPÓN</div>}
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <div className="font-medium">{s.name}</div>
+                                                    <div className="text-xs text-gray-500">{s.sector}{s.country && ` • ${s.country}`}</div>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold ${s.type === 'cedear' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+                                                        {s.type === 'cedear' ? 'CEDEAR' : 'LOCAL'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3 text-right font-bold">${s.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                                                <td className="px-3 py-3 text-right">
+                                                    <span className={`px-2 py-1 rounded ${s.variation > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                        {s.variation > 0 ? '↑' : '↓'} {s.variation.toFixed(2)}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={`px-2 py-1 rounded ${s.rsi < 30 ? 'bg-green-100 text-green-800' : s.rsi > 70 ? 'bg-red-100 text-red-800' : 'bg-gray-100'}`}>
+                                                        {s.rsi.toFixed(0)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <div className={`border rounded p-2 text-xs ${s.strategy.type === 'BUY' ? 'bg-green-50 border-green-300' : s.strategy.type === 'SELL' ? 'bg-red-50 border-red-300' : 'bg-gray-50'}`}>
+                                                        <div className="font-bold">{s.strategy.type}</div>
+                                                        <div className="text-xs">{s.strategy.signal}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3 text-right">${s.strategy.entry.toFixed(2)}</td>
+                                                <td className="px-3 py-3 text-right text-gray-600 font-medium">${s.strategy.targetSimple.toFixed(2)}</td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={`px-2 py-1 rounded-full font-bold ${pctSimple > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {pctSimple > 0 ? '↑' : '↓'} {Math.abs(pctSimple).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3 text-right text-green-600 font-bold">${s.strategy.target.toFixed(2)}</td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={`px-2 py-1 rounded-full font-bold border-2 ${pctRobust > 0 ? 'bg-emerald-100 text-emerald-700 border-emerald-400' : 'bg-rose-100 text-rose-700 border-rose-400'}`}>
+                                                        {pctRobust > 0 ? '↑' : '↓'} {Math.abs(pctRobust).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3 text-right text-gray-600">${s.strategy.stopSimple.toFixed(2)}</td>
+                                                <td className="px-3 py-3 text-right text-red-600 font-bold">${s.strategy.stop.toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+                            <h3 className="font-bold text-lg mb-4">📊 Información</h3>
+                            
+                            <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                <div className="p-4 bg-purple-50 rounded-lg">
+                                    <h4 className="font-bold text-purple-900 mb-2">¿Qué son los CEDEARs?</h4>
+                                    <p className="text-sm text-purple-800">Certificados que representan acciones extranjeras. Te permiten invertir en empresas como Apple, Google, etc. desde BYMA en pesos.</p>
+                                </div>
+                                <div className="p-4 bg-orange-50 rounded-lg">
+                                    <h4 className="font-bold text-orange-900 mb-2">🚀 Galpones</h4>
+                                    <p className="text-sm text-orange-800">Empresas de alto crecimiento en sectores disruptivos (fintech, ciberseguridad, aeroespacial). Mayor riesgo y potencial.</p>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-indigo-50 rounded-lg">
+                                <h4 className="font-bold mb-2">Comparación de Métodos</h4>
+                                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <strong>Método Simple:</strong> Porcentajes fijos (+8%/+12% objetivos). Fácil pero no considera volatilidad.
+                                    </div>
+                                    <div className="text-green-700">
+                                        <strong>Método Robusto ✓:</strong> Fibonacci + ATR + Soportes/Resistencias + Risk/Reward dinámico. Más preciso y adaptativo.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p className="text-xs text-gray-500 mt-4 italic">
+                                <strong>Disclaimer:</strong> Datos simulados solo para fines educativos. Consulte a un asesor financiero.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<BYMAStocksTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
