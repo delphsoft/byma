@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BYMA Stocks Tracker</title>
+    <title>BYMA Stocks & CEDEARs Tracker</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -52,24 +52,55 @@
             </svg>
         );
 
+        const Globe = ({ className }) => (
+            <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+        );
+
         const BYMAStocksTracker = () => {
             const [stocks, setStocks] = useState([]);
             const [loading, setLoading] = useState(false);
             const [lastUpdate, setLastUpdate] = useState(null);
             const [sortBy, setSortBy] = useState('variation');
             const [filterStrategy, setFilterStrategy] = useState('all');
+            const [assetType, setAssetType] = useState('all');
+            const [showGalpones, setShowGalpones] = useState(false);
 
             const sampleStocks = [
-                { ticker: 'GGAL', name: 'Grupo Financiero Galicia', sector: 'Financiero', price: 580.50, prevClose: 565.00 },
-                { ticker: 'YPF', name: 'YPF Sociedad Anónima', sector: 'Energía', price: 425.80, prevClose: 438.20 },
-                { ticker: 'PAMP', name: 'Pampa Energía', sector: 'Energía', price: 310.25, prevClose: 295.00 },
-                { ticker: 'BMA', name: 'Banco Macro', sector: 'Financiero', price: 892.40, prevClose: 870.00 },
-                { ticker: 'VIST', name: 'Vista Energy', sector: 'Energía', price: 156.70, prevClose: 160.50 },
-                { ticker: 'TXAR', name: 'Ternium Argentina', sector: 'Siderurgia', price: 201.30, prevClose: 198.00 },
-                { ticker: 'ALUA', name: 'Aluar Aluminio Argentino', sector: 'Metalurgia', price: 178.90, prevClose: 185.40 },
-                { ticker: 'LOMA', name: 'Loma Negra', sector: 'Construcción', price: 125.60, prevClose: 122.30 },
-                { ticker: 'TGSU2', name: 'Transportadora de Gas del Sur', sector: 'Energía', price: 267.80, prevClose: 255.00 },
-                { ticker: 'EDN', name: 'Edenor', sector: 'Servicios', price: 89.45, prevClose: 92.10 },
+                { ticker: 'GGAL', name: 'Grupo Financiero Galicia', sector: 'Financiero', price: 580.50, prevClose: 565.00, type: 'local' },
+                { ticker: 'YPF', name: 'YPF Sociedad Anónima', sector: 'Energía', price: 425.80, prevClose: 438.20, type: 'local' },
+                { ticker: 'PAMP', name: 'Pampa Energía', sector: 'Energía', price: 310.25, prevClose: 295.00, type: 'local' },
+                { ticker: 'BMA', name: 'Banco Macro', sector: 'Financiero', price: 892.40, prevClose: 870.00, type: 'local' },
+                { ticker: 'VIST', name: 'Vista Energy', sector: 'Energía', price: 156.70, prevClose: 160.50, type: 'local' },
+                { ticker: 'TXAR', name: 'Ternium Argentina', sector: 'Siderurgia', price: 201.30, prevClose: 198.00, type: 'local' },
+                { ticker: 'ALUA', name: 'Aluar Aluminio Argentino', sector: 'Metalurgia', price: 178.90, prevClose: 185.40, type: 'local' },
+                { ticker: 'LOMA', name: 'Loma Negra', sector: 'Construcción', price: 125.60, prevClose: 122.30, type: 'local' },
+                { ticker: 'TGSU2', name: 'Transportadora de Gas del Sur', sector: 'Energía', price: 267.80, prevClose: 255.00, type: 'local' },
+                { ticker: 'EDN', name: 'Edenor', sector: 'Servicios', price: 89.45, prevClose: 92.10, type: 'local' },
+                
+                // CEDEARs
+                { ticker: 'AAPL', name: 'Apple Inc.', sector: 'Tecnología', price: 18450.00, prevClose: 18200.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'GOOGL', name: 'Alphabet Inc.', sector: 'Tecnología', price: 15280.00, prevClose: 15450.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'MSFT', name: 'Microsoft Corporation', sector: 'Tecnología', price: 22100.00, prevClose: 21850.00, type: 'cedear', country: 'USA', ratio: '5:1' },
+                { ticker: 'TSLA', name: 'Tesla Inc.', sector: 'Automotriz', price: 12670.00, prevClose: 13100.00, type: 'cedear', country: 'USA', ratio: '2:1' },
+                { ticker: 'AMZN', name: 'Amazon.com Inc.', sector: 'E-commerce', price: 19800.00, prevClose: 19450.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'META', name: 'Meta Platforms Inc.', sector: 'Tecnología', price: 9350.00, prevClose: 9580.00, type: 'cedear', country: 'USA', ratio: '2:1' },
+                { ticker: 'NVDA', name: 'NVIDIA Corporation', sector: 'Semiconductores', price: 14250.00, prevClose: 13800.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'KO', name: 'The Coca-Cola Company', sector: 'Bebidas', price: 6780.00, prevClose: 6650.00, type: 'cedear', country: 'USA', ratio: '1:1' },
+                { ticker: 'DIS', name: 'The Walt Disney Company', sector: 'Entretenimiento', price: 10450.00, prevClose: 10680.00, type: 'cedear', country: 'USA', ratio: '1:1' },
+                { ticker: 'BABA', name: 'Alibaba Group', sector: 'E-commerce', price: 8920.00, prevClose: 9150.00, type: 'cedear', country: 'China', ratio: '2:1' },
+                { ticker: 'GOLD', name: 'Barrick Gold Corporation', sector: 'Minería', price: 1850.00, prevClose: 1820.00, type: 'cedear', country: 'Canadá', ratio: '1:1' },
+                { ticker: 'MELI', name: 'MercadoLibre Inc.', sector: 'E-commerce', price: 24500.00, prevClose: 23900.00, type: 'cedear', country: 'Argentina', ratio: '10:1' },
+                
+                // Galpones (High Growth/Speculative)
+                { ticker: 'HOOD', name: 'Robinhood Markets Inc.', sector: 'Fintech', price: 3280.00, prevClose: 3150.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
+                { ticker: 'CRWD', name: 'CrowdStrike Holdings Inc.', sector: 'Ciberseguridad', price: 38900.00, prevClose: 39500.00, type: 'cedear', country: 'USA', ratio: '10:1', category: 'galpones' },
+                { ticker: 'OKLO', name: 'Oklo Inc.', sector: 'Energía Nuclear', price: 1580.00, prevClose: 1450.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
+                { ticker: 'RKLB', name: 'Rocket Lab USA Inc.', sector: 'Aeroespacial', price: 2890.00, prevClose: 2750.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
+                { ticker: 'ALAB', name: 'Astera Labs Inc.', sector: 'Semiconductores', price: 8920.00, prevClose: 8650.00, type: 'cedear', country: 'USA', ratio: '2:1', category: 'galpones' },
             ];
 
             const calculateMetrics = (stock) => {
@@ -177,8 +208,10 @@
             });
 
             const filteredStocks = sortedStocks.filter(stock => {
-                if (filterStrategy === 'all') return true;
-                return stock.strategy.type === filterStrategy;
+                const strategyMatch = filterStrategy === 'all' || stock.strategy.type === filterStrategy;
+                const typeMatch = assetType === 'all' || stock.type === assetType;
+                const galponesMatch = !showGalpones || stock.category === 'galpones';
+                return strategyMatch && typeMatch && galponesMatch;
             });
 
             const getVariationColor = (variation) => {
@@ -194,6 +227,15 @@
                 return 'bg-gray-100 text-gray-800 border-gray-300';
             };
 
+            const stats = {
+                total: stocks.length,
+                local: stocks.filter(s => s.type === 'local').length,
+                cedear: stocks.filter(s => s.type === 'cedear').length,
+                galpones: stocks.filter(s => s.category === 'galpones').length,
+                buySignals: stocks.filter(s => s.strategy?.type === 'BUY').length,
+                sellSignals: stocks.filter(s => s.strategy?.type === 'SELL').length,
+            };
+
             return (
                 <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
                     <div className="max-w-7xl mx-auto">
@@ -202,7 +244,7 @@
                                 <div>
                                     <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                         <DollarSign className="text-indigo-600" />
-                                        BYMA Stocks Tracker
+                                        BYMA Stocks & CEDEARs Tracker
                                     </h1>
                                     <p className="text-gray-600 mt-1">Mercado de Valores de Buenos Aires</p>
                                 </div>
@@ -221,10 +263,53 @@
                                     Última actualización: {lastUpdate.toLocaleTimeString('es-AR')}
                                 </p>
                             )}
+
+                            {/* Stats */}
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
+                                <div className="bg-blue-50 rounded-lg p-3">
+                                    <div className="text-xs text-blue-600 font-medium">Total Activos</div>
+                                    <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
+                                </div>
+                                <div className="bg-green-50 rounded-lg p-3">
+                                    <div className="text-xs text-green-600 font-medium">Acciones Locales</div>
+                                    <div className="text-2xl font-bold text-green-700">{stats.local}</div>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <div className="text-xs text-purple-600 font-medium">CEDEARs</div>
+                                    <div className="text-2xl font-bold text-purple-700">{stats.cedear}</div>
+                                </div>
+                                <div className="bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100 transition" onClick={() => setShowGalpones(!showGalpones)}>
+                                    <div className="text-xs text-orange-600 font-medium">🚀 Galpones</div>
+                                    <div className="text-2xl font-bold text-orange-700">{stats.galpones}</div>
+                                    {showGalpones && <div className="text-xs text-orange-600 mt-1">✓ Filtrado</div>}
+                                </div>
+                                <div className="bg-emerald-50 rounded-lg p-3">
+                                    <div className="text-xs text-emerald-600 font-medium">Señales Compra</div>
+                                    <div className="text-2xl font-bold text-emerald-700">{stats.buySignals}</div>
+                                </div>
+                                <div className="bg-red-50 rounded-lg p-3">
+                                    <div className="text-xs text-red-600 font-medium">Señales Venta</div>
+                                    <div className="text-2xl font-bold text-red-700">{stats.sellSignals}</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
                             <div className="flex flex-wrap gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tipo de activo:
+                                    </label>
+                                    <select
+                                        value={assetType}
+                                        onChange={(e) => setAssetType(e.target.value)}
+                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <option value="all">Todos</option>
+                                        <option value="local">Acciones Locales</option>
+                                        <option value="cedear">CEDEARs</option>
+                                    </select>
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Ordenar por:
@@ -265,6 +350,7 @@
                                         <tr>
                                             <th className="px-4 py-3 text-left text-sm font-semibold">Ticker</th>
                                             <th className="px-4 py-3 text-left text-sm font-semibold">Empresa</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold">Tipo</th>
                                             <th className="px-4 py-3 text-right text-sm font-semibold">Precio</th>
                                             <th className="px-4 py-3 text-right text-sm font-semibold">Variación %</th>
                                             <th className="px-4 py-3 text-center text-sm font-semibold">RSI</th>
@@ -279,15 +365,39 @@
                                             <tr key={stock.ticker} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                                 <td className="px-4 py-4">
                                                     <span className="font-bold text-indigo-600">{stock.ticker}</span>
+                                                    {stock.type === 'cedear' && stock.ratio && (
+                                                        <div className="text-xs text-gray-500">{stock.ratio}</div>
+                                                    )}
+                                                    {stock.category === 'galpones' && (
+                                                        <div className="text-xs font-semibold text-orange-600">🚀 GALPÓN</div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <div>
                                                         <div className="font-medium text-gray-900">{stock.name}</div>
-                                                        <div className="text-xs text-gray-500">{stock.sector}</div>
+                                                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                                                            {stock.sector}
+                                                            {stock.country && (
+                                                                <>
+                                                                    <span className="mx-1">•</span>
+                                                                    <Globe className="w-3 h-3" />
+                                                                    {stock.country}
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                                        stock.type === 'cedear' 
+                                                            ? 'bg-purple-100 text-purple-700' 
+                                                            : 'bg-green-100 text-green-700'
+                                                    }`}>
+                                                        {stock.type === 'cedear' ? 'CEDEAR' : 'LOCAL'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-4 py-4 text-right font-semibold">
-                                                    ${stock.price.toFixed(2)}
+                                                    ${stock.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                                                 </td>
                                                 <td className="px-4 py-4 text-right">
                                                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded ${getVariationColor(stock.variation)}`}>
@@ -312,13 +422,13 @@
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4 text-right text-sm">
-                                                    ${stock.strategy.entry.toFixed(2)}
+                                                    ${stock.strategy.entry.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                                                 </td>
                                                 <td className="px-4 py-4 text-right text-sm text-green-600 font-medium">
-                                                    ${stock.strategy.target.toFixed(2)}
+                                                    ${stock.strategy.target.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                                                 </td>
                                                 <td className="px-4 py-4 text-right text-sm text-red-600 font-medium">
-                                                    ${stock.strategy.stop.toFixed(2)}
+                                                    ${stock.strategy.stop.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                                                 </td>
                                             </tr>
                                         ))}
@@ -330,8 +440,34 @@
                         <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
                             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                                 <AlertCircle className="text-indigo-600" />
-                                Leyenda de Estrategias
+                                Información y Leyenda
                             </h3>
+                            
+                            <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                                    <Globe className="text-purple-600" />
+                                    ¿Qué son los CEDEARs?
+                                </h4>
+                                <p className="text-sm text-purple-800">
+                                    Los CEDEARs (Certificados de Depósito Argentinos) son certificados que representan acciones de empresas extranjeras 
+                                    que cotizan en el exterior. Te permiten invertir en empresas como Apple, Google, Tesla, etc., operando en pesos argentinos 
+                                    desde el mercado local BYMA. El ratio indica cuántos CEDEARs equivalen a 1 acción del exterior (ej: 10:1 significa que 10 CEDEARs = 1 acción).
+                                </p>
+                            </div>
+
+                            <div className="mb-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                                <h4 className="font-semibold text-orange-900 mb-2 flex items-center gap-2">
+                                    🚀 ¿Qué son los "Galpones"?
+                                </h4>
+                                <p className="text-sm text-orange-800 mb-2">
+                                    Los "Galpones" son acciones de empresas de alto crecimiento y/o especulativas, típicamente en sectores disruptivos como fintech, 
+                                    ciberseguridad, aeroespacial y energía nuclear. Son inversiones de mayor riesgo pero con potencial de alta rentabilidad.
+                                </p>
+                                <div className="text-xs text-orange-700 font-semibold bg-orange-100 p-2 rounded">
+                                    ⚠️ Categoría de alto riesgo: Mayor volatilidad, ideal para inversores con tolerancia al riesgo
+                                </div>
+                            </div>
+
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
                                     <h4 className="font-semibold text-green-700 mb-2">Señales de Compra (BUY)</h4>
@@ -350,7 +486,8 @@
                             </div>
                             <p className="text-xs text-gray-500 mt-4 italic">
                                 <strong>Disclaimer:</strong> Esta herramienta es solo para fines educativos y de demostración. 
-                                Los datos mostrados son simulados. Siempre consulte con un asesor financiero antes de tomar decisiones de inversión.
+                                Los datos mostrados son simulados. Los CEDEARs están sujetos a riesgo cambiario y de mercado.
+                                Siempre consulte con un asesor financiero antes de tomar decisiones de inversión.
                             </p>
                         </div>
                     </div>
