@@ -23,6 +23,7 @@
             const [filterStrategy, setFilterStrategy] = useState('all');
             const [assetType, setAssetType] = useState('all');
             const [showGalpones, setShowGalpones] = useState(false);
+            const [selectedStock, setSelectedStock] = useState(null);
 
             const sampleStocks = [
                 { ticker: 'GGAL', name: 'Grupo Financiero Galicia', sector: 'Financiero', price: 580.50, prevClose: 565.00, type: 'local' },
@@ -145,6 +146,216 @@
                 };
             };
 
+            const generateFundamentals = (stock) => {
+                const isProfitable = Math.random() > 0.3;
+                const marketCap = stock.price * (Math.random() * 50000000 + 10000000);
+                const pe = isProfitable ? (Math.random() * 30 + 5).toFixed(2) : 'N/A';
+                const dividend = Math.random() > 0.5 ? (Math.random() * 5).toFixed(2) : '0.00';
+                const eps = isProfitable ? (stock.price / parseFloat(pe)).toFixed(2) : 'Negativo';
+                const roe = (Math.random() * 30 - 5).toFixed(2);
+                const debtToEquity = (Math.random() * 2).toFixed(2);
+                const revenue = marketCap * (Math.random() * 0.3 + 0.1);
+                const profitMargin = isProfitable ? (Math.random() * 25).toFixed(2) : (-Math.random() * 10).toFixed(2);
+                
+                return {
+                    marketCap: marketCap.toFixed(0),
+                    pe,
+                    dividend,
+                    eps,
+                    roe,
+                    debtToEquity,
+                    revenue: revenue.toFixed(0),
+                    profitMargin,
+                    bookValue: (stock.price * (0.8 + Math.random() * 0.4)).toFixed(2),
+                    priceToBook: (stock.price / (stock.price * (0.8 + Math.random() * 0.4))).toFixed(2),
+                    beta: (0.5 + Math.random() * 1.5).toFixed(2),
+                    volume: (Math.random() * 5000000 + 100000).toFixed(0)
+                };
+            };
+
+            const generateChartData = (stock) => {
+                const data = [];
+                let price = stock.prevClose * 0.95;
+                for (let i = 0; i < 30; i++) {
+                    price = price * (1 + (Math.random() - 0.48) * 0.05);
+                    data.push({
+                        date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('es-AR', {month: 'short', day: 'numeric'}),
+                        price: price
+                    });
+                }
+                data.push({
+                    date: 'Hoy',
+                    price: stock.price
+                });
+                return data;
+            };
+
+            const StockModal = ({ stock, onClose }) => {
+                if (!stock) return null;
+                
+                const fundamentals = generateFundamentals(stock);
+                const chartData = generateChartData(stock);
+                const maxPrice = Math.max(...chartData.map(d => d.price));
+                const minPrice = Math.min(...chartData.map(d => d.price));
+                const priceRange = maxPrice - minPrice;
+                
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+                        <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-3xl font-bold">{stock.ticker}</h2>
+                                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${stock.type === 'cedear' ? 'bg-purple-400' : 'bg-green-400'}`}>
+                                            {stock.type === 'cedear' ? 'CEDEAR' : 'LOCAL'}
+                                        </span>
+                                        {stock.category === 'galpones' && (
+                                            <span className="px-3 py-1 rounded-full text-sm font-bold bg-orange-400">🚀 GALPÓN</span>
+                                        )}
+                                    </div>
+                                    <p className="text-xl mt-1">{stock.name}</p>
+                                    <p className="text-sm opacity-90">{stock.sector}{stock.country && ` • ${stock.country}`}</p>
+                                    <div className="mt-3 flex items-baseline gap-3">
+                                        <span className="text-4xl font-bold">${stock.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}</span>
+                                        <span className={`text-xl font-bold ${stock.variation > 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                            {stock.variation > 0 ? '↑' : '↓'} {stock.variation.toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 text-2xl font-bold">
+                                    ✕
+                                </button>
+                            </div>
+                            
+                            <div className="p-6">
+                                <div className="mb-6">
+                                    <h3 className="text-xl font-bold mb-4">📈 Evolución de Precio (30 días)</h3>
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <div className="h-64 flex items-end justify-between gap-1">
+                                            {chartData.map((point, idx) => {
+                                                const heightPercent = ((point.price - minPrice) / priceRange) * 100;
+                                                const isToday = point.date === 'Hoy';
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center justify-end group relative">
+                                                        <div className="absolute -top-8 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                                            ${point.price.toFixed(2)}<br/>{point.date}
+                                                        </div>
+                                                        <div 
+                                                            className={`w-full rounded-t transition-all ${isToday ? 'bg-indigo-600' : point.price > stock.prevClose ? 'bg-green-400' : 'bg-red-400'}`}
+                                                            style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                                        ></div>
+                                                        {(idx % 5 === 0 || isToday) && (
+                                                            <div className="text-xs text-gray-500 mt-1 transform -rotate-45 origin-top-left whitespace-nowrap">{point.date}</div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="flex justify-between text-sm text-gray-600 mt-8 pt-4 border-t">
+                                            <span>Mínimo: ${minPrice.toFixed(2)}</span>
+                                            <span>Máximo: ${maxPrice.toFixed(2)}</span>
+                                            <span>Rango: ${priceRange.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mb-6">
+                                    <h3 className="text-xl font-bold mb-4">🎯 Análisis Técnico</h3>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className={`p-4 rounded-lg border-2 ${stock.strategy.type === 'BUY' ? 'bg-green-50 border-green-300' : stock.strategy.type === 'SELL' ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-300'}`}>
+                                            <div className="text-2xl font-bold mb-2">{stock.strategy.type}</div>
+                                            <div className="text-lg mb-2">{stock.strategy.signal}</div>
+                                            <div className="text-sm opacity-75 mb-3">{stock.strategy.reasoning}</div>
+                                            <div className="text-xs bg-white bg-opacity-50 p-2 rounded">📊 {stock.strategy.methods}</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-blue-50 p-3 rounded-lg">
+                                                <div className="text-xs text-blue-600 font-medium">RSI</div>
+                                                <div className="text-2xl font-bold text-blue-700">{stock.rsi.toFixed(0)}</div>
+                                                <div className="text-xs text-blue-600">{stock.rsi < 30 ? 'Sobreventa' : stock.rsi > 70 ? 'Sobrecompra' : 'Neutral'}</div>
+                                            </div>
+                                            <div className="bg-purple-50 p-3 rounded-lg">
+                                                <div className="text-xs text-purple-600 font-medium">Entrada</div>
+                                                <div className="text-lg font-bold text-purple-700">${stock.strategy.entry.toFixed(2)}</div>
+                                            </div>
+                                            <div className="bg-green-50 p-3 rounded-lg">
+                                                <div className="text-xs text-green-600 font-medium">Objetivo</div>
+                                                <div className="text-lg font-bold text-green-700">${stock.strategy.target.toFixed(2)}</div>
+                                                <div className="text-xs text-green-600">+{((stock.strategy.target - stock.price) / stock.price * 100).toFixed(1)}%</div>
+                                            </div>
+                                            <div className="bg-red-50 p-3 rounded-lg">
+                                                <div className="text-xs text-red-600 font-medium">Stop Loss</div>
+                                                <div className="text-lg font-bold text-red-700">${stock.strategy.stop.toFixed(2)}</div>
+                                                <div className="text-xs text-red-600">{((stock.strategy.stop - stock.price) / stock.price * 100).toFixed(1)}%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-xl font-bold mb-4">💼 Datos Fundamentales</h3>
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                        <div className="bg-indigo-50 p-4 rounded-lg">
+                                            <div className="text-sm text-indigo-600 font-medium">Capitalización de Mercado</div>
+                                            <div className="text-2xl font-bold text-indigo-900">${(fundamentals.marketCap / 1000000).toFixed(2)}M</div>
+                                        </div>
+                                        <div className="bg-green-50 p-4 rounded-lg">
+                                            <div className="text-sm text-green-600 font-medium">P/E Ratio</div>
+                                            <div className="text-2xl font-bold text-green-900">{fundamentals.pe}</div>
+                                        </div>
+                                        <div className="bg-blue-50 p-4 rounded-lg">
+                                            <div className="text-sm text-blue-600 font-medium">Dividendo %</div>
+                                            <div className="text-2xl font-bold text-blue-900">{fundamentals.dividend}%</div>
+                                        </div>
+                                        <div className="bg-purple-50 p-4 rounded-lg">
+                                            <div className="text-sm text-purple-600 font-medium">EPS</div>
+                                            <div className="text-2xl font-bold text-purple-900">${fundamentals.eps}</div>
+                                        </div>
+                                        <div className="bg-yellow-50 p-4 rounded-lg">
+                                            <div className="text-sm text-yellow-600 font-medium">ROE</div>
+                                            <div className="text-2xl font-bold text-yellow-900">{fundamentals.roe}%</div>
+                                        </div>
+                                        <div className="bg-pink-50 p-4 rounded-lg">
+                                            <div className="text-sm text-pink-600 font-medium">Deuda/Patrimonio</div>
+                                            <div className="text-2xl font-bold text-pink-900">{fundamentals.debtToEquity}</div>
+                                        </div>
+                                        <div className="bg-teal-50 p-4 rounded-lg">
+                                            <div className="text-sm text-teal-600 font-medium">Ingresos</div>
+                                            <div className="text-2xl font-bold text-teal-900">${(fundamentals.revenue / 1000000).toFixed(2)}M</div>
+                                        </div>
+                                        <div className="bg-orange-50 p-4 rounded-lg">
+                                            <div className="text-sm text-orange-600 font-medium">Margen de Beneficio</div>
+                                            <div className="text-2xl font-bold text-orange-900">{fundamentals.profitMargin}%</div>
+                                        </div>
+                                        <div className="bg-cyan-50 p-4 rounded-lg">
+                                            <div className="text-sm text-cyan-600 font-medium">Beta</div>
+                                            <div className="text-2xl font-bold text-cyan-900">{fundamentals.beta}</div>
+                                        </div>
+                                        <div className="bg-lime-50 p-4 rounded-lg">
+                                            <div className="text-sm text-lime-600 font-medium">Valor Libro</div>
+                                            <div className="text-2xl font-bold text-lime-900">${fundamentals.bookValue}</div>
+                                        </div>
+                                        <div className="bg-rose-50 p-4 rounded-lg">
+                                            <div className="text-sm text-rose-600 font-medium">P/B Ratio</div>
+                                            <div className="text-2xl font-bold text-rose-900">{fundamentals.priceToBook}</div>
+                                        </div>
+                                        <div className="bg-violet-50 p-4 rounded-lg">
+                                            <div className="text-sm text-violet-600 font-medium">Volumen</div>
+                                            <div className="text-2xl font-bold text-violet-900">{(fundamentals.volume / 1000).toFixed(0)}K</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                                    ⚠️ <strong>Nota:</strong> Los datos fundamentales y el gráfico son simulados para fines demostrativos. 
+                                    Para datos reales, integra una API como IOL, Primary, o Yahoo Finance.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             const loadStocks = () => {
                 setLoading(true);
                 setTimeout(() => {
@@ -186,12 +397,13 @@
 
             return (
                 <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+                    {selectedStock && <StockModal stock={selectedStock} onClose={() => setSelectedStock(null)} />}
                     <div className="max-w-7xl mx-auto">
                         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h1 className="text-3xl font-bold text-gray-800">BYMA Stocks & CEDEARs Tracker</h1>
-                                    <p className="text-gray-600 mt-1">Mercado de Valores de Buenos Aires</p>
+                                    <p className="text-gray-600 mt-1">Mercado de Valores de Buenos Aires - Click en cualquier fila para ver detalles</p>
                                 </div>
                                 <button
                                     onClick={loadStocks}
@@ -283,7 +495,11 @@
                                         const pctSimple = ((s.strategy.targetSimple - s.price) / s.price * 100);
                                         const pctRobust = ((s.strategy.target - s.price) / s.price * 100);
                                         return (
-                                            <tr key={s.ticker} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                            <tr 
+                                                key={s.ticker} 
+                                                className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-50 cursor-pointer transition`}
+                                                onClick={() => setSelectedStock(s)}
+                                            >
                                                 <td className="px-3 py-3">
                                                     <div className="font-bold text-indigo-600">{s.ticker}</div>
                                                     {s.ratio && <div className="text-xs text-gray-500">{s.ratio}</div>}
