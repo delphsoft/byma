@@ -173,19 +173,26 @@
                 };
             };
 
-            const generateChartData = (stock) => {
+            const generateChartData = (stock, days) => {
                 const data = [];
                 let price = stock.prevClose * 0.95;
-                for (let i = 0; i < 30; i++) {
-                    price = price * (1 + (Math.random() - 0.48) * 0.05);
+                const volatility = stock.type === 'cedear' && stock.category === 'galpones' ? 0.08 : 0.04;
+                
+                for (let i = 0; i < days; i++) {
+                    price = price * (1 + (Math.random() - 0.48) * volatility);
+                    const date = new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000);
                     data.push({
-                        date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('es-AR', {month: 'short', day: 'numeric'}),
-                        price: price
+                        date: days === 1 
+                            ? date.toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'})
+                            : date.toLocaleDateString('es-AR', {month: 'short', day: 'numeric'}),
+                        price: price,
+                        fullDate: date
                     });
                 }
                 data.push({
-                    date: 'Hoy',
-                    price: stock.price
+                    date: days === 1 ? 'Ahora' : 'Hoy',
+                    price: stock.price,
+                    fullDate: new Date()
                 });
                 return data;
             };
@@ -193,11 +200,22 @@
             const StockModal = ({ stock, onClose }) => {
                 if (!stock) return null;
                 
+                const [timeframe, setTimeframe] = useState('30d');
                 const fundamentals = generateFundamentals(stock);
-                const chartData = generateChartData(stock);
+                
+                const timeframes = {
+                    '1d': { days: 1, label: '1 Día (Intradía)' },
+                    '7d': { days: 7, label: '7 Días' },
+                    '30d': { days: 30, label: '30 Días' },
+                    '90d': { days: 90, label: '3 Meses' },
+                    '365d': { days: 365, label: '1 Año' }
+                };
+                
+                const chartData = generateChartData(stock, timeframes[timeframe].days);
                 const maxPrice = Math.max(...chartData.map(d => d.price));
                 const minPrice = Math.min(...chartData.map(d => d.price));
                 const priceRange = maxPrice - minPrice;
+                const avgPrice = chartData.reduce((sum, d) => sum + d.price, 0) / chartData.length;
                 
                 return (
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
