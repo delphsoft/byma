@@ -28,36 +28,50 @@
             const FINNHUB_API_KEY = 'ct6smj9r01qilrvcu0d0ct6smj9r01qilrvcu0dg';
 
             const sampleStocks = [
-                { ticker: 'GGAL', name: 'Grupo Financiero Galicia', sector: 'Financiero', price: 580.50, prevClose: 565.00, type: 'local' },
-                { ticker: 'YPF', name: 'YPF Sociedad Anónima', sector: 'Energía', price: 425.80, prevClose: 438.20, type: 'local' },
-                { ticker: 'PAMP', name: 'Pampa Energía', sector: 'Energía', price: 310.25, prevClose: 295.00, type: 'local' },
-                { ticker: 'BMA', name: 'Banco Macro', sector: 'Financiero', price: 892.40, prevClose: 870.00, type: 'local' },
-                { ticker: 'VIST', name: 'Vista Energy', sector: 'Energía', price: 156.70, prevClose: 160.50, type: 'local' },
-                { ticker: 'TXAR', name: 'Ternium Argentina', sector: 'Siderurgia', price: 201.30, prevClose: 198.00, type: 'local' },
-                { ticker: 'ALUA', name: 'Aluar Aluminio Argentino', sector: 'Metalurgia', price: 178.90, prevClose: 185.40, type: 'local' },
-                { ticker: 'LOMA', name: 'Loma Negra', sector: 'Construcción', price: 125.60, prevClose: 122.30, type: 'local' },
-                { ticker: 'TGSU2', name: 'Transportadora de Gas del Sur', sector: 'Energía', price: 267.80, prevClose: 255.00, type: 'local' },
-                { ticker: 'EDN', name: 'Edenor', sector: 'Servicios', price: 89.45, prevClose: 92.10, type: 'local' },
+                { ticker: 'GGAL', name: 'Grupo Financiero Galicia', sector: 'Financiero', basePrice: 580.50, type: 'local' },
+                { ticker: 'YPF', name: 'YPF Sociedad Anónima', sector: 'Energía', basePrice: 425.80, type: 'local' },
+                { ticker: 'PAMP', name: 'Pampa Energía', sector: 'Energía', basePrice: 310.25, type: 'local' },
+                { ticker: 'BMA', name: 'Banco Macro', sector: 'Financiero', basePrice: 892.40, type: 'local' },
+                { ticker: 'VIST', name: 'Vista Energy', sector: 'Energía', basePrice: 156.70, type: 'local' },
+                { ticker: 'TXAR', name: 'Ternium Argentina', sector: 'Siderurgia', basePrice: 201.30, type: 'local' },
+                { ticker: 'ALUA', name: 'Aluar Aluminio Argentino', sector: 'Metalurgia', basePrice: 178.90, type: 'local' },
+                { ticker: 'LOMA', name: 'Loma Negra', sector: 'Construcción', basePrice: 125.60, type: 'local' },
+                { ticker: 'TGSU2', name: 'Transportadora de Gas del Sur', sector: 'Energía', basePrice: 267.80, type: 'local' },
+                { ticker: 'EDN', name: 'Edenor', sector: 'Servicios', basePrice: 89.45, type: 'local' },
                 
-                { ticker: 'AAPL', name: 'Apple Inc.', sector: 'Tecnología', price: 18450.00, prevClose: 18200.00, type: 'cedear', country: 'USA', ratio: '10:1' },
-                { ticker: 'GOOGL', name: 'Alphabet Inc.', sector: 'Tecnología', price: 15280.00, prevClose: 15450.00, type: 'cedear', country: 'USA', ratio: '10:1' },
-                { ticker: 'MSFT', name: 'Microsoft Corporation', sector: 'Tecnología', price: 22100.00, prevClose: 21850.00, type: 'cedear', country: 'USA', ratio: '5:1' },
-                { ticker: 'TSLA', name: 'Tesla Inc.', sector: 'Automotriz', price: 12670.00, prevClose: 13100.00, type: 'cedear', country: 'USA', ratio: '2:1' },
-                { ticker: 'AMZN', name: 'Amazon.com Inc.', sector: 'E-commerce', price: 19800.00, prevClose: 19450.00, type: 'cedear', country: 'USA', ratio: '10:1' },
-                { ticker: 'META', name: 'Meta Platforms Inc.', sector: 'Tecnología', price: 9350.00, prevClose: 9580.00, type: 'cedear', country: 'USA', ratio: '2:1' },
-                { ticker: 'NVDA', name: 'NVIDIA Corporation', sector: 'Semiconductores', price: 14250.00, prevClose: 13800.00, type: 'cedear', country: 'USA', ratio: '10:1' },
-                { ticker: 'KO', name: 'The Coca-Cola Company', sector: 'Bebidas', price: 6780.00, prevClose: 6650.00, type: 'cedear', country: 'USA', ratio: '1:1' },
-                { ticker: 'DIS', name: 'The Walt Disney Company', sector: 'Entretenimiento', price: 10450.00, prevClose: 10680.00, type: 'cedear', country: 'USA', ratio: '1:1' },
-                { ticker: 'BABA', name: 'Alibaba Group', sector: 'E-commerce', price: 8920.00, prevClose: 9150.00, type: 'cedear', country: 'China', ratio: '2:1' },
-                { ticker: 'GOLD', name: 'Barrick Gold Corporation', sector: 'Minería', price: 1850.00, prevClose: 1820.00, type: 'cedear', country: 'Canadá', ratio: '1:1' },
-                { ticker: 'MELI', name: 'MercadoLibre Inc.', sector: 'E-commerce', price: 24500.00, prevClose: 23900.00, type: 'cedear', country: 'Argentina', ratio: '10:1' },
+                { ticker: 'AAPL', name: 'Apple Inc.', sector: 'Tecnología', basePrice: 18450.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'GOOGL', name: 'Alphabet Inc.', sector: 'Tecnología', basePrice: 15280.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'MSFT', name: 'Microsoft Corporation', sector: 'Tecnología', basePrice: 22100.00, type: 'cedear', country: 'USA', ratio: '5:1' },
+                { ticker: 'TSLA', name: 'Tesla Inc.', sector: 'Automotriz', basePrice: 12670.00, type: 'cedear', country: 'USA', ratio: '2:1' },
+                { ticker: 'AMZN', name: 'Amazon.com Inc.', sector: 'E-commerce', basePrice: 19800.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'META', name: 'Meta Platforms Inc.', sector: 'Tecnología', basePrice: 9350.00, type: 'cedear', country: 'USA', ratio: '2:1' },
+                { ticker: 'NVDA', name: 'NVIDIA Corporation', sector: 'Semiconductores', basePrice: 14250.00, type: 'cedear', country: 'USA', ratio: '10:1' },
+                { ticker: 'KO', name: 'The Coca-Cola Company', sector: 'Bebidas', basePrice: 6780.00, type: 'cedear', country: 'USA', ratio: '1:1' },
+                { ticker: 'DIS', name: 'The Walt Disney Company', sector: 'Entretenimiento', basePrice: 10450.00, type: 'cedear', country: 'USA', ratio: '1:1' },
+                { ticker: 'BABA', name: 'Alibaba Group', sector: 'E-commerce', basePrice: 8920.00, type: 'cedear', country: 'China', ratio: '2:1' },
+                { ticker: 'GOLD', name: 'Barrick Gold Corporation', sector: 'Minería', basePrice: 1850.00, type: 'cedear', country: 'Canadá', ratio: '1:1' },
+                { ticker: 'MELI', name: 'MercadoLibre Inc.', sector: 'E-commerce', basePrice: 24500.00, type: 'cedear', country: 'Argentina', ratio: '10:1' },
                 
-                { ticker: 'HOOD', name: 'Robinhood Markets Inc.', sector: 'Fintech', price: 3280.00, prevClose: 3150.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
-                { ticker: 'CRWD', name: 'CrowdStrike Holdings Inc.', sector: 'Ciberseguridad', price: 38900.00, prevClose: 39500.00, type: 'cedear', country: 'USA', ratio: '10:1', category: 'galpones' },
-                { ticker: 'OKLO', name: 'Oklo Inc.', sector: 'Energía Nuclear', price: 1580.00, prevClose: 1450.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
-                { ticker: 'RKLB', name: 'Rocket Lab USA Inc.', sector: 'Aeroespacial', price: 2890.00, prevClose: 2750.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
-                { ticker: 'ALAB', name: 'Astera Labs Inc.', sector: 'Semiconductores', price: 8920.00, prevClose: 8650.00, type: 'cedear', country: 'USA', ratio: '2:1', category: 'galpones' },
+                { ticker: 'HOOD', name: 'Robinhood Markets Inc.', sector: 'Fintech', basePrice: 3280.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
+                { ticker: 'CRWD', name: 'CrowdStrike Holdings Inc.', sector: 'Ciberseguridad', basePrice: 38900.00, type: 'cedear', country: 'USA', ratio: '10:1', category: 'galpones' },
+                { ticker: 'OKLO', name: 'Oklo Inc.', sector: 'Energía Nuclear', basePrice: 1580.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
+                { ticker: 'RKLB', name: 'Rocket Lab USA Inc.', sector: 'Aeroespacial', basePrice: 2890.00, type: 'cedear', country: 'USA', ratio: '1:1', category: 'galpones' },
+                { ticker: 'ALAB', name: 'Astera Labs Inc.', sector: 'Semiconductores', basePrice: 8920.00, type: 'cedear', country: 'USA', ratio: '2:1', category: 'galpones' },
             ];
+
+            const generatePrices = (stock) => {
+                // Generar variación aleatoria entre -5% y +5% (mayor para galpones)
+                const maxVariation = stock.category === 'galpones' ? 0.08 : 0.05;
+                const variation = (Math.random() - 0.5) * maxVariation;
+                
+                const prevClose = stock.basePrice;
+                const price = prevClose * (1 + variation);
+                
+                return {
+                    price: parseFloat(price.toFixed(2)),
+                    prevClose: parseFloat(prevClose.toFixed(2))
+                };
+            };
 
             const calculateMetrics = (stock) => {
                 const variation = ((stock.price - stock.prevClose) / stock.prevClose) * 100;
@@ -395,9 +409,17 @@
                 setLoading(true);
                 setTimeout(() => {
                     const enrichedStocks = sampleStocks.map(stock => {
-                        const metrics = calculateMetrics(stock);
-                        const strategy = determineStrategy(stock, metrics);
-                        return { ...stock, ...metrics, strategy };
+                        // Generar nuevos precios cada vez
+                        const prices = generatePrices(stock);
+                        const stockWithPrices = { ...stock, ...prices };
+                        
+                        const metrics = calculateMetrics(stockWithPrices);
+                        const strategy = determineStrategy(stockWithPrices, metrics);
+                        
+                        // Actualizar el basePrice para la próxima actualización
+                        stock.basePrice = prices.price;
+                        
+                        return { ...stockWithPrices, ...metrics, strategy };
                     });
                     setStocks(enrichedStocks);
                     setLastUpdate(new Date());
