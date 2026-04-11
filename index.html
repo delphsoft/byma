@@ -346,37 +346,74 @@ function updTape(){
 updTape();
 setInterval(updTape,5000);
 
+// ── VERIFICAR SI YA TIENE SESIÓN ──────────────────────────────────────────
+(async()=>{
+  const saved=localStorage.getItem('pampa_user');
+  if(saved){
+    try{
+      const u=JSON.parse(saved);
+      if(u?.email&&u?.status&&u.status!=='expired'){
+        // Ya tiene sesión activa → ir directo al terminal
+        window.location.href='/terminal.html';
+        return;
+      }
+    }catch{}
+  }
+})();
+
 // ── EMAIL SUBMIT ──────────────────────────────────────────────────────────
 async function submitEmail(){
   const input=document.getElementById('email-input');
-  const email=input.value.trim();
+  const email=input.value.trim().toLowerCase();
 
   if(!email||!email.includes('@')||!email.includes('.')){
-    input.style.borderBottom='2px solid var(--rd)';
+    input.style.outline='2px solid var(--rd)';
     input.placeholder='Email inválido — intentá de nuevo';
-    setTimeout(()=>{input.style.borderBottom='';input.placeholder='tu@email.com';},2200);
+    setTimeout(()=>{input.style.outline='';input.placeholder='tu@email.com';},2200);
     return;
   }
 
   const btn=document.querySelector('.form-btn');
-  btn.textContent='ENVIANDO...';btn.disabled=true;
+  btn.textContent='VERIFICANDO...';btn.disabled=true;
 
   try{
-    // En producción: POST /api/subscribe
-    const res=await fetch('/api/subscribe',{
+    // 1. Registrar / verificar en el API de acceso
+    const res=await fetch('/api/access',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,ts:new Date().toISOString(),src:'landing'}),
-    }).catch(()=>null);
+      body:JSON.stringify({email,src:'landing'}),
+    });
 
-    // Fallback local si el API no está disponible aún
-    const emails=JSON.parse(localStorage.getItem('pampa_emails')||'[]');
-    if(!emails.includes(email)){emails.push(email);localStorage.setItem('pampa_emails',JSON.stringify(emails));}
+    let data={status:'active',daysLeft:45,email};
+    if(res.ok) data=await res.json();
 
+    // 2. Guardar sesión en localStorage
+    localStorage.setItem('pampa_user',JSON.stringify({
+      email:data.email||email,
+      status:data.status,
+      daysLeft:data.daysLeft,
+      registeredAt:data.registeredAt||new Date().toISOString(),
+      savedAt:Date.now(),
+    }));
+
+    // 3. Mostrar éxito brevemente y redirigir
     document.getElementById('form-row').classList.add('gone');
     document.getElementById('form-success').classList.add('show');
+
+    setTimeout(()=>{
+      window.location.href='/terminal.html';
+    },1400);
+
   }catch(e){
-    btn.textContent='ACCEDER →';btn.disabled=false;
+    console.warn('[submit]',e.message);
+    // Fallback: guardar local y redirigir igual
+    localStorage.setItem('pampa_user',JSON.stringify({
+      email,status:'active',daysLeft:45,
+      registeredAt:new Date().toISOString(),savedAt:Date.now(),
+    }));
+    document.getElementById('form-row').classList.add('gone');
+    document.getElementById('form-success').classList.add('show');
+    setTimeout(()=>{ window.location.href='/terminal.html'; },1400);
   }
 }
 

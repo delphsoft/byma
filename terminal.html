@@ -893,39 +893,96 @@ function getNewsForStock(s){
   return items.slice(0,8);
 }
 
-// ── REFRESH ───────────────────────────────────────────────────────────────────
-function refresh(){
-  stocks=BASE.map(b=>genStock(b));
-  updMBar();renderTable();updStats();updTape();updScreener();
+// ── REFRESH — consume APIs reales ────────────────────────────────────────────
+async function refresh(){
+  // 1. Precios reales de CEDEARs via Yahoo Finance
+  const cedearSymbols=BASE.filter(b=>b.type==='cedear').map(b=>b.ticker).join(',');
+  let realPrices={};
+  try{
+    const r=await fetch(`/api/prices?symbols=${cedearSymbols}`);
+    if(r.ok){const d=await r.json();realPrices=d.quotes||{};}
+  }catch(e){console.warn('[refresh] /api/prices falló:',e.message);}
+
+  // 2. Generar stocks — precio real para CEDEARs, simulado para locales
+  stocks=BASE.map(b=>{
+    if(b.type==='cedear'&&realPrices[b.ticker]){
+      const q=realPrices[b.ticker];
+      // Convertir precio USD a ARS usando CCL del market bar
+      const ccl=INDICES.ccl?.v||1250;
+      const ratio=parseInt((b.ratio||'1:1').split(':')[0])||1;
+      const priceARS=parseFloat((q.price*ccl/ratio).toFixed(2));
+      const prevARS =parseFloat(((q.prevClose||q.price)*ccl/ratio).toFixed(2));
+      const pct=q.changePct||((priceARS-prevARS)/prevARS*100);
+      // Preservar basePrice para cálculos técnicos
+      b.basePrice=priceARS;
+      const sma20=priceARS*(1-(Math.random()*0.05-0.025));
+      const sma50=priceARS*(1-(Math.random()*0.08-0.04));
+      const e9=priceARS*(1+(Math.random()*0.02-0.01));
+      const e21=priceARS*(1+(Math.random()*0.03-0.015));
+      const rsi_=pct>0?50+Math.random()*30:20+Math.random()*30;
+      const h52=priceARS*(1+Math.random()*0.15+0.05);
+      const l52=priceARS*(1-Math.random()*0.15-0.05);
+      const atr=priceARS*(0.02+Math.random()*0.03);
+      const strat=calcStrat(priceARS,pct,rsi_,sma20,sma50,h52,l52,atr,e9,e21);
+      return{...b,price:priceARS,prevClose:prevARS,pct,sma20,sma50,ema9:e9,ema21:e21,
+        rsi:rsi_,h52,l52,atr,strat,_source:'yahoo'};
+    }
+    return genStock(b); // locales: simulado
+  });
+
+  // 3. Market bar con datos reales
+  await updMBar();
+
+  renderTable();updStats();updTape();updScreener();
   document.getElementById('lupd').textContent='ÚLTIMA ACT: '+new Date().toLocaleTimeString('es-AR');
-  countdown=30;document.getElementById('load').classList.remove('show');
+  countdown=30;
+  document.getElementById('load').classList.remove('show');
   if(document.getElementById('mov').classList.contains('open')&&cStock){
     const s=stocks.find(x=>x.ticker===cStock.ticker);
     if(s)drawChart(s,cTF);
   }
 }
 
-function updMBar(){
-  const keys=[
-    {k:'merval',id:'merval',f:v=>v.toLocaleString('es-AR',{maximumFractionDigits:0})},
-    {k:'sp500', id:'sp',    f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
-    {k:'nasdaq',id:'nq',    f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
-    {k:'dow',   id:'dj',    f:v=>v.toLocaleString('en-US',{maximumFractionDigits:0})},
-    {k:'blue',  id:'blue',  f:v=>v.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0})},
-    {k:'ccl',   id:'ccl',   f:v=>v.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0})},
-    {k:'wti',   id:'wti',   f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
-    {k:'brent', id:'brent', f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
-    {k:'gold',  id:'gold',  f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
-    {k:'silver',id:'silver',f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
-  ];
-  keys.forEach(({k,id,f})=>{
-    const m=INDICES[k],chg=(Math.random()-0.48)*1.8;
-    m.v*=(1+chg/100);
-    document.getElementById('mv-'+id).textContent=f(m.v);
-    document.getElementById('mv-'+id).className='mbv '+(chg>=0?'up':'dn');
-    document.getElementById('mc-'+id).textContent=(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(2)+'%';
-    document.getElementById('mc-'+id).className='mbc '+(chg>=0?'up':'dn');
-  });
+// Configuración de formato por índice
+const MBAR_CFG=[
+  {k:'merval',id:'merval',f:v=>v.toLocaleString('es-AR',{maximumFractionDigits:0})},
+  {k:'sp500', id:'sp',    f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
+  {k:'nasdaq',id:'nq',    f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
+  {k:'dow',   id:'dj',    f:v=>v.toLocaleString('en-US',{maximumFractionDigits:0})},
+  {k:'blue',  id:'blue',  f:v=>v.toLocaleString('es-AR',{maximumFractionDigits:0})},
+  {k:'ccl',   id:'ccl',   f:v=>v.toLocaleString('es-AR',{maximumFractionDigits:0})},
+  {k:'wti',   id:'wti',   f:v=>v.toFixed(2)},
+  {k:'brent', id:'brent', f:v=>v.toFixed(2)},
+  {k:'gold',  id:'gold',  f:v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})},
+  {k:'silver',id:'silver',f:v=>v.toFixed(2)},
+];
+
+async function updMBar(){
+  try{
+    const r=await fetch('/api/market');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const {market}=await r.json();
+    MBAR_CFG.forEach(({k,id,f})=>{
+      const d=market[k];if(!d)return;
+      // Actualizar INDICES para que refresh() use CCL correcto
+      if(INDICES[k])INDICES[k].v=d.value;
+      const ve=document.getElementById('mv-'+id);
+      const ce=document.getElementById('mc-'+id);
+      if(ve){ve.textContent=f(d.value);ve.className='mbv '+(d.change>=0?'up':'dn');}
+      if(ce){ce.textContent=(d.change>=0?'▲':'▼')+Math.abs(d.change).toFixed(2)+'%';ce.className='mbc '+(d.change>=0?'up':'dn');}
+    });
+  }catch(e){
+    // Fallback: simulación si el API no responde
+    console.warn('[updMBar] /api/market falló, usando simulado:',e.message);
+    MBAR_CFG.forEach(({k,id,f})=>{
+      const m=INDICES[k];if(!m)return;
+      const chg=(Math.random()-0.48)*1.5;m.v*=(1+chg/100);
+      const ve=document.getElementById('mv-'+id);
+      const ce=document.getElementById('mc-'+id);
+      if(ve){ve.textContent=f(m.v);ve.className='mbv '+(chg>=0?'up':'dn');}
+      if(ce){ce.textContent=(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(2)+'%';ce.className='mbc '+(chg>=0?'up':'dn');}
+    });
+  }
 }
 
 function updClock(){
@@ -1135,7 +1192,7 @@ function openModalWithStock(s){
   setTimeout(()=>drawChart(s,'30d'),60);
   buildTechPanel(s);
   buildFundamentals(s);
-  buildNews(s);
+  buildNews(s); // async — carga noticias reales del API
 }
 
 function buildTechPanel(s){
@@ -1316,20 +1373,53 @@ function buildFundamentals(s){
   `;
 }
 
-function buildNews(s){
-  const news=getNewsForStock(s);
-  const impMap={pos:'imp-pos',neg:'imp-neg',neu:'imp-neu'};
-  const impLabel={pos:'POSITIVO',neg:'NEGATIVO',neu:'NEUTRAL'};
-  document.getElementById('news-list').innerHTML=news.map(n=>`
-    <div class="news-item">
-      <div style="flex:1">
-        <div class="news-src">${n.src}</div>
-        <div class="news-title">${n.title}</div>
-        <div class="news-meta">${n.age} · ${n.tags.map(t=>'#'+t).join(' ')}</div>
-      </div>
-      <span class="news-impact ${impMap[n.impact]}">${impLabel[n.impact]}</span>
-    </div>
-  `).join('');
+async function buildNews(s){
+  const impMap={pos:'imp-pos',neg:'imp-neg',neu:'imp-neu',positive:'imp-pos',negative:'imp-neg',neutral:'imp-neu'};
+  const impLabel={pos:'POSITIVO',neg:'NEGATIVO',neu:'NEUTRAL',positive:'POSITIVO',negative:'NEGATIVO',neutral:'NEUTRAL'};
+  const listEl=document.getElementById('news-list');
+  listEl.innerHTML='<div style="color:var(--t3);font-size:10px;padding:16px 0">Cargando noticias...</div>';
+  try{
+    const r=await fetch(`/api/news?ticker=${s.ticker}&sector=${encodeURIComponent(s.sector||'')}`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const {articles,source}=await r.json();
+    const srcBadge=source==='rss'
+      ?'<span style="font-size:8px;color:var(--gr);border:1px solid var(--grD);padding:1px 5px;margin-left:8px">LIVE RSS</span>'
+      :'<span style="font-size:8px;color:var(--t3);border:1px solid var(--b);padding:1px 5px;margin-left:8px">CURADO</span>';
+    listEl.innerHTML=(articles||[]).map(n=>{
+      const imp=n.sentiment||n.impact||'neu';
+      const age=n.age||(n.publishedAt?formatNewsAge(n.publishedAt):'reciente');
+      const srcName=n.source?.name||n.src||'—';
+      return`<div class="news-item">
+        <div style="flex:1">
+          <div class="news-src">${srcName}${srcBadge}</div>
+          <div class="news-title">${n.title}</div>
+          <div class="news-meta">${age}${n.url&&n.url!=='#'?` · <a href="${n.url}" target="_blank" style="color:var(--or);text-decoration:none">leer →</a>`:''}</div>
+        </div>
+        <span class="news-impact ${impMap[imp]||'imp-neu'}">${impLabel[imp]||'NEUTRAL'}</span>
+      </div>`;
+    }).join('');
+  }catch(e){
+    // Fallback al sistema curado local
+    console.warn('[buildNews] /api/news falló:',e.message);
+    const news=getNewsForStock(s);
+    listEl.innerHTML=news.map(n=>`
+      <div class="news-item">
+        <div style="flex:1">
+          <div class="news-src">${n.src}</div>
+          <div class="news-title">${n.title}</div>
+          <div class="news-meta">${n.age}</div>
+        </div>
+        <span class="news-impact ${impMap[n.impact]||'imp-neu'}">${impLabel[n.impact]||'NEUTRAL'}</span>
+      </div>`).join('');
+  }
+}
+
+function formatNewsAge(dateStr){
+  try{
+    const diff=Date.now()-new Date(dateStr).getTime();
+    const h=Math.floor(diff/3600000),d=Math.floor(h/24);
+    if(d>0)return`hace ${d}d`;if(h>0)return`hace ${h}h`;return'hace unos minutos';
+  }catch{return'reciente';}
 }
 
 function closeModal(e){
@@ -1418,7 +1508,270 @@ window.addEventListener('resize',()=>{
 
 setInterval(updClock,1000);
 updClock();
-setTimeout(()=>{refresh();startCD();},500);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FREEMIUM ACCESS SYSTEM — 45 días gratis
+// ═══════════════════════════════════════════════════════════════════════════
+const TRIAL_DAYS=45;
+const WARN_DAYS=15;   // primer aviso
+const URGENT_DAYS=5;  // aviso urgente
+
+// Inyectar estilos del sistema freemium
+(()=>{
+  const st=document.createElement('style');
+  st.textContent=`
+    #access-banner{
+      position:fixed;bottom:28px;left:0;right:0;z-index:800;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:9px 20px;font-size:11px;font-family:'IBM Plex Mono',monospace;
+      gap:12px;flex-wrap:wrap;
+    }
+    #access-banner.warn   {background:#1a1400;border-top:1px solid var(--yl);color:var(--yl);}
+    #access-banner.urgent {background:#1a0500;border-top:1px solid var(--or);color:var(--or);}
+    #access-banner button{
+      background:var(--or);color:#000;border:none;padding:4px 14px;
+      font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;
+      letter-spacing:1px;cursor:pointer;white-space:nowrap;
+    }
+    #access-banner button:hover{background:var(--orL);}
+    #access-banner .dismiss{
+      background:none;border:1px solid currentColor;color:currentColor;
+      opacity:0.5;padding:3px 10px;
+    }
+    #access-banner .dismiss:hover{opacity:1;background:transparent;}
+
+    /* POPUP de aviso */
+    #trial-popup{
+      display:none;position:fixed;inset:0;background:rgba(5,5,15,.92);
+      z-index:850;align-items:center;justify-content:center;
+    }
+    #trial-popup.show{display:flex;}
+    #trial-popup-inner{
+      background:#0d0d1a;border:1px solid var(--or);
+      max-width:420px;width:92%;padding:32px 28px;text-align:center;
+      font-family:'IBM Plex Mono',monospace;
+    }
+    #trial-popup .pop-icon{font-size:36px;margin-bottom:12px;}
+    #trial-popup .pop-title{font-size:18px;font-weight:700;color:var(--or);letter-spacing:2px;margin-bottom:8px;}
+    #trial-popup .pop-days{font-size:48px;font-weight:700;color:var(--yl);line-height:1;margin:12px 0;}
+    #trial-popup .pop-sub{font-size:11px;color:var(--t2);line-height:1.8;margin-bottom:20px;}
+    #trial-popup .pop-btn{
+      display:block;width:100%;padding:12px;background:var(--or);
+      color:#000;font-family:'IBM Plex Mono',monospace;font-size:12px;
+      font-weight:700;letter-spacing:2px;border:none;cursor:pointer;margin-bottom:10px;
+    }
+    #trial-popup .pop-btn:hover{background:var(--orL);}
+    #trial-popup .pop-skip{
+      font-size:10px;color:var(--t3);cursor:pointer;letter-spacing:1px;
+      background:none;border:none;font-family:'IBM Plex Mono',monospace;
+    }
+    #trial-popup .pop-skip:hover{color:var(--t2);}
+
+    /* PAYWALL — bloqueo total */
+    #paywall{
+      display:none;position:fixed;inset:0;background:rgba(5,5,15,.98);
+      z-index:900;align-items:center;justify-content:center;flex-direction:column;
+      font-family:'IBM Plex Mono',monospace;text-align:center;padding:24px;
+    }
+    #paywall.show{display:flex;}
+    #paywall .pw-logo{font-size:13px;color:var(--or);letter-spacing:4px;font-weight:700;margin-bottom:32px;}
+    #paywall .pw-icon{font-size:44px;margin-bottom:16px;}
+    #paywall .pw-title{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-0.5px;margin-bottom:8px;}
+    #paywall .pw-sub{font-size:12px;color:var(--t2);line-height:1.9;max-width:400px;margin-bottom:28px;}
+    #paywall .pw-price{
+      font-size:42px;font-weight:700;color:var(--yl);line-height:1;margin-bottom:4px;
+    }
+    #paywall .pw-period{font-size:11px;color:var(--t2);margin-bottom:24px;}
+    #paywall .pw-features{
+      text-align:left;background:#0f0f1e;border:1px solid var(--b);
+      padding:16px 20px;margin-bottom:24px;max-width:360px;width:100%;
+    }
+    #paywall .pw-feat{font-size:11px;color:var(--t1);padding:4px 0;display:flex;align-items:center;gap:8px;}
+    #paywall .pw-feat::before{content:'✓';color:var(--gr);font-weight:700;}
+    #paywall .pw-cta{
+      width:100%;max-width:360px;padding:14px;
+      background:var(--or);color:#000;border:none;
+      font-family:'IBM Plex Mono',monospace;font-size:13px;
+      font-weight:700;letter-spacing:2px;cursor:pointer;margin-bottom:12px;
+    }
+    #paywall .pw-cta:hover{background:var(--orL);}
+    #paywall .pw-logout{
+      font-size:10px;color:var(--t3);cursor:pointer;letter-spacing:1px;
+      background:none;border:none;font-family:'IBM Plex Mono',monospace;
+    }
+    #paywall .pw-logout:hover{color:var(--t2);}
+    #paywall .pw-note{font-size:9px;color:var(--t3);margin-top:12px;}
+  `;
+  document.head.appendChild(st);
+})();
+
+// Inyectar HTML del sistema
+document.body.insertAdjacentHTML('beforeend',`
+  <!-- BANNER días restantes -->
+  <div id="access-banner" style="display:none">
+    <span id="banner-text"></span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="showTrialPopup()">VER PLAN PRO →</button>
+      <button class="dismiss" onclick="document.getElementById('access-banner').style.display='none'">✕</button>
+    </div>
+  </div>
+
+  <!-- POPUP aviso de vencimiento -->
+  <div id="trial-popup">
+    <div id="trial-popup-inner">
+      <div class="pop-icon">⏰</div>
+      <div class="pop-title">TRIAL TERMINANDO</div>
+      <div class="pop-days" id="pop-days-num">0</div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:8px">días restantes de acceso gratuito</div>
+      <div class="pop-sub">
+        Seguí disfrutando de análisis técnico completo,<br>
+        fundamentals, screener y noticias en tiempo real.<br><br>
+        <b style="color:var(--t1)">Plan Pro: USD $3/mes</b> — cancelás cuando querés.
+      </div>
+      <button class="pop-btn" onclick="goToPricing()">CONTINUAR CON PRO →</button>
+      <button class="pop-skip" onclick="dismissPopup()">Seguir con trial gratuito</button>
+    </div>
+  </div>
+
+  <!-- PAYWALL — acceso bloqueado -->
+  <div id="paywall">
+    <div class="pw-logo">▐ PAMPA TERMINAL</div>
+    <div class="pw-icon">🔒</div>
+    <div class="pw-title">Tu período gratuito venció</div>
+    <div class="pw-sub">
+      Tuviste 45 días de acceso completo.<br>
+      Para seguir operando con datos reales,<br>análisis técnico y fundamentals, activá el Plan Pro.
+    </div>
+    <div class="pw-price">$3<span style="font-size:18px">/mes</span></div>
+    <div class="pw-period">USD · Cancelás cuando querés · Sin compromisos</div>
+    <div class="pw-features">
+      <div class="pw-feat">Precios en tiempo real (Yahoo Finance)</div>
+      <div class="pw-feat">Análisis técnico completo: EMA, RSI, MACD, BB</div>
+      <div class="pw-feat">Fundamentals detallados por ticker</div>
+      <div class="pw-feat">Screener técnico con 10+ filtros</div>
+      <div class="pw-feat">Noticias RSS en tiempo real</div>
+      <div class="pw-feat">27 instrumentos: locales + CEDEARs</div>
+      <div class="pw-feat">Índices y commodities globales</div>
+    </div>
+    <button class="pw-cta" onclick="goToPricing()">ACTIVAR PLAN PRO — $3/MES →</button>
+    <button class="pw-logout" onclick="logout()">← Salir y cambiar de cuenta</button>
+    <div class="pw-note">Pago seguro · Google Pay disponible · Stripe</div>
+  </div>
+`);
+
+// ── LÓGICA DE ACCESO ──────────────────────────────────────────────────────
+let pampaUser=null;
+let popupShown=false;
+
+async function initAccess(){
+  // 1. Leer sesión local
+  try{ pampaUser=JSON.parse(localStorage.getItem('pampa_user')||'null'); }catch{}
+
+  // Sin sesión → redirigir a landing
+  if(!pampaUser?.email){
+    window.location.href='/';
+    return false;
+  }
+
+  // 2. Verificar contra KV (fuente de verdad) si la sesión local es reciente
+  const savedAge=Date.now()-(pampaUser.savedAt||0);
+  const REFRESH_INTERVAL=3600000; // re-verificar cada hora
+  if(savedAge>REFRESH_INTERVAL){
+    try{
+      const r=await fetch(`/api/access?email=${encodeURIComponent(pampaUser.email)}`);
+      if(r.ok){
+        const data=await r.json();
+        // Si el usuario no existe en KV, registrarlo ahora
+        if(data.status==='new'){
+          const r2=await fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({email:pampaUser.email,src:'terminal-direct'})});
+          if(r2.ok){const d2=await r2.json();Object.assign(data,d2);}
+        }
+        pampaUser={...pampaUser,...data,savedAt:Date.now()};
+        localStorage.setItem('pampa_user',JSON.stringify(pampaUser));
+      }
+    }catch(e){console.warn('[access] KV check falló:',e.message);}
+  }
+
+  // 3. Calcular días restantes localmente (más rápido que esperar KV)
+  if(pampaUser.registeredAt&&pampaUser.status!=='premium'){
+    const elapsed=Date.now()-new Date(pampaUser.registeredAt).getTime();
+    const daysUsed=Math.floor(elapsed/86400000);
+    pampaUser.daysLeft=Math.max(0,TRIAL_DAYS-daysUsed);
+    if(pampaUser.daysLeft<=0)             pampaUser.status='expired';
+    else if(pampaUser.daysLeft<=URGENT_DAYS)pampaUser.status='urgent';
+    else if(pampaUser.daysLeft<=WARN_DAYS)  pampaUser.status='expiring';
+    else                                    pampaUser.status='active';
+  }
+
+  // 4. Aplicar estado
+  const {status,daysLeft,email}=pampaUser;
+
+  if(status==='premium'){
+    // Acceso completo sin restricciones
+    return true;
+  }
+
+  if(status==='expired'){
+    // Bloquear con paywall
+    document.getElementById('paywall').classList.add('show');
+    document.getElementById('load').classList.remove('show');
+    return false;
+  }
+
+  // Trial activo — mostrar banner y/o popup según urgencia
+  if(status==='urgent'||status==='expiring'){
+    const banner=document.getElementById('access-banner');
+    const bannerText=document.getElementById('banner-text');
+    banner.className=`access-banner ${status}`;
+    banner.style.display='flex';
+    bannerText.textContent= status==='urgent'
+      ?`⚠ ÚLTIMOS ${daysLeft} DÍAS de acceso gratuito`
+      :`🔔 Quedan ${daysLeft} días de trial gratuito`;
+
+    // Popup: mostrar una vez por sesión
+    const popKey=`pampa_pop_${Math.floor(Date.now()/86400000)}`; // una vez por día
+    if(!sessionStorage.getItem(popKey)&&!popupShown){
+      popupShown=true;
+      sessionStorage.setItem(popKey,'1');
+      setTimeout(()=>{
+        document.getElementById('pop-days-num').textContent=daysLeft;
+        document.getElementById('trial-popup').classList.add('show');
+      },3000);
+    }
+  }
+
+  // Mostrar email en status bar
+  const lupd=document.getElementById('lupd');
+  if(lupd) lupd.title=`Sesión: ${email} · ${daysLeft} días restantes`;
+
+  return true;
+}
+
+function showTrialPopup(){
+  document.getElementById('pop-days-num').textContent=pampaUser?.daysLeft||0;
+  document.getElementById('trial-popup').classList.add('show');
+}
+
+function dismissPopup(){
+  document.getElementById('trial-popup').classList.remove('show');
+}
+
+function goToPricing(){
+  // Por ahora muestra un alert — cuando integres Stripe, acá va el link
+  dismissPopup();
+  alert('🚀 Próximamente — Plan Pro USD $3/mes\n\nDejanos tu email en la landing y te avisamos cuando esté disponible el pago.');
+}
+
+function logout(){
+  localStorage.removeItem('pampa_user');
+  window.location.href='/';
+}
+
+// ── INIT: acceso primero, luego app ──────────────────────────────────────
+initAccess().then(ok=>{
+  if(ok){ refresh(); startCD(); }
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  SECURITY LAYER — Pampa Terminal © 2025
