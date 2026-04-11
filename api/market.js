@@ -1,129 +1,110 @@
 /**
  * GET /api/market
- * Devuelve datos de índices globales y commodities
- *
- * Fuentes:
- *  - Finnhub: S&P 500 (SPY ETF), NASDAQ (QQQ), DOW (DIA)
- *  - Finnhub: Oro (GC1!), WTI (CL1!), Brent (CB1!)
- *  - dolarapi.com: merval (próximamente via IOL/Cocos)
- *
- * Fallback completo si no hay API keys.
+ * Índices globales y commodities — sin API key.
+ * Fuentes: Yahoo Finance (índices/commodities) + dolarapi.com (FX)
  */
 
-const FINNHUB_BASE = 'https://finnhub.io/api/v1';
-
-// ETFs como proxies de índices (disponibles en Finnhub gratuito)
-const INDEX_SYMBOLS = {
-  sp500:  { symbol: 'SPY',  name: 'S&P 500',    mult: 10,  currency: 'USD' },
-  nasdaq: { symbol: 'QQQ',  name: 'NASDAQ',      mult: 55,  currency: 'USD' },
-  dow:    { symbol: 'DIA',  name: 'DOW JONES',   mult: 100, currency: 'USD' },
+const YAHOO_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json',
 };
 
-// Commodities via Finnhub (formato: symbol en Finnhub)
-const COMMODITY_SYMBOLS = {
-  gold:   { symbol: 'OANDA:XAU_USD', name: 'Oro',   currency: 'USD/oz' },
-  silver: { symbol: 'OANDA:XAG_USD', name: 'Plata', currency: 'USD/oz' },
-  oil:    { symbol: 'OANDA:BCO_USD', name: 'Brent', currency: 'USD/bbl' },
+// Símbolos de Yahoo para cada índice/commodity
+const YAHOO_SYMBOLS = {
+  sp500:  '^GSPC',   // S&P 500
+  nasdaq: '^IXIC',   // NASDAQ Composite
+  dow:    '^DJI',    // Dow Jones
+  wti:    'CL=F',    // WTI Crude Oil Futures
+  brent:  'BZ=F',    // Brent Crude Futures
+  gold:   'GC=F',    // Gold Futures
+  silver: 'SI=F',    // Silver Futures
+  merval: '^MERV',   // MERVAL
 };
 
-// Valores de referencia para el fallback
 const DEFAULTS = {
-  merval: { v: 1_872_450, chg: 0.8 },
-  sp500:  { v: 5_242.10,  chg: 0.3 },
-  nasdaq: { v: 16_455.20, chg: 0.5 },
-  dow:    { v: 38_841.50, chg: 0.2 },
-  wti:    { v: 82.45,     chg: -0.4 },
-  brent:  { v: 86.12,     chg: -0.3 },
-  gold:   { v: 3_128.40,  chg: 0.6 },
-  silver: { v: 31.82,     chg: 0.4 },
-  blue:   { v: 1_278,     chg: 0.1 },
-  ccl:    { v: 1_252,     chg: 0.1 },
+  merval: 1_872_450, sp500: 5_242, nasdaq: 16_455,
+  dow: 38_841,       wti: 82.45,   brent: 86.12,
+  gold: 3_128,       silver: 31.82,
+  blue: 1_278,       ccl: 1_252,
 };
 
-function simulateMarket() {
-  const result = {};
-  for (const [key, d] of Object.entries(DEFAULTS)) {
-    const noise = (Math.random() - 0.48) * 0.8;
-    const v = d.v * (1 + noise / 100);
-    result[key] = {
-      value:     parseFloat(v.toFixed(key === 'merval' ? 0 : 2)),
-      change:    parseFloat((d.chg + (Math.random() - 0.5) * 0.5).toFixed(2)),
-      source:    'simulated',
-    };
-  }
-  return result;
+async function fetchYahooIndex(key, yahooSymbol) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=2d`;
+  const res = await fetch(url, {
+    headers: YAHOO_HEADERS,
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`Yahoo ${res.status} para ${yahooSymbol}`);
+  const json = await res.json();
+  const meta = json?.chart?.result?.[0]?.meta;
+  if (!meta) throw new Error(`Sin meta para ${yahooSymbol}`);
+  const price     = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+  const changePct = prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0;
+  return {
+    value:   parseFloat(price.toFixed(key === 'merval' ? 0 : 2)),
+    change:  parseFloat(changePct.toFixed(2)),
+    source:  'yahoo',
+  };
 }
 
-async function fetchFinnhubQuote(symbol, apiKey) {
-  const url = `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
-  if (!res.ok) throw new Error(`Finnhub ${res.status}`);
-  const d = await res.json();
+function simulated(key) {
+  const base = DEFAULTS[key] || 100;
+  const chg  = (Math.random() - 0.48) * 1.4;
   return {
-    value:  d.c,
-    change: d.pc > 0 ? ((d.c - d.pc) / d.pc) * 100 : 0,
-    source: 'finnhub',
+    value:  parseFloat((base * (1 + chg / 100)).toFixed(key === 'merval' ? 0 : 2)),
+    change: parseFloat(chg.toFixed(2)),
+    source: 'simulated',
   };
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const apiKey = process.env.FINNHUB_API_KEY;
+  // Fetch Yahoo indices en paralelo + dolar API
+  const [yahooResults, dolarData] = await Promise.all([
+    Promise.allSettled(
+      Object.entries(YAHOO_SYMBOLS).map(async ([key, sym]) => {
+        try {
+          const data = await fetchYahooIndex(key, sym);
+          return [key, data];
+        } catch (e) {
+          console.warn(`[market] Yahoo falló para ${key}: ${e.message}`);
+          return [key, simulated(key)];
+        }
+      })
+    ),
+    fetch('https://dolarapi.com/v1/dolares', {
+      headers: { 'User-Agent': 'PampaTerminal/1.0' },
+      signal: AbortSignal.timeout(5000),
+    }).then(r => r.json()).catch(() => null),
+  ]);
 
-  try {
-    let market;
-
-    if (apiKey && apiKey !== 'tu_key_aqui') {
-      // Fetch índices en paralelo (limitado a 5 para no exceder rate limit gratis)
-      const [spy, qqq] = await Promise.allSettled([
-        fetchFinnhubQuote('SPY', apiKey),
-        fetchFinnhubQuote('QQQ', apiKey),
-      ]);
-
-      // Dólar desde dolarapi
-      const dolarRes = await fetch('https://dolarapi.com/v1/dolares', {
-        signal: AbortSignal.timeout(4000),
-      }).then(r => r.json()).catch(() => null);
-
-      const blue = dolarRes?.find(d => d.casa === 'blue');
-      const ccl  = dolarRes?.find(d => d.casa === 'contadoconliqui');
-
-      // Simular los que no se pudieron obtener
-      const sim = simulateMarket();
-
-      market = {
-        merval: sim.merval,
-        sp500:  spy.status === 'fulfilled'
-          ? { value: spy.value.value * 10, change: spy.value.change, source: 'finnhub/SPY' }
-          : sim.sp500,
-        nasdaq: qqq.status === 'fulfilled'
-          ? { value: qqq.value.value * 55, change: qqq.value.change, source: 'finnhub/QQQ' }
-          : sim.nasdaq,
-        dow:    sim.dow,
-        wti:    sim.wti,
-        brent:  sim.brent,
-        gold:   sim.gold,
-        silver: sim.silver,
-        blue:   blue  ? { value: blue.venta,  change: blue.variacion || 0, source: 'dolarapi' } : sim.blue,
-        ccl:    ccl   ? { value: ccl.venta,   change: ccl.variacion  || 0, source: 'dolarapi' } : sim.ccl,
-      };
-
-    } else {
-      // Modo simulado completo
-      console.warn('[/api/market] Sin API keys — datos simulados');
-      market = simulateMarket();
+  // Armar objeto market desde Yahoo
+  const market = {};
+  for (const result of yahooResults) {
+    if (result.status === 'fulfilled') {
+      const [key, data] = result.value;
+      market[key] = data;
     }
-
-    res.setHeader('Cache-Control', 's-maxage=25, stale-while-revalidate=30');
-    return res.status(200).json({ market, ts: Date.now() });
-
-  } catch (error) {
-    console.error('[/api/market]', error.message);
-    return res.status(200).json({
-      market: simulateMarket(),
-      ts: Date.now(),
-      warning: 'Datos simulados: ' + error.message,
-    });
   }
+
+  // Agregar dólar desde dolarapi
+  if (dolarData) {
+    const blue = dolarData.find(d => d.casa === 'blue');
+    const ccl  = dolarData.find(d => d.casa === 'contadoconliqui');
+    market.blue = blue ? { value: blue.venta,  change: blue.variacion  || 0, source: 'dolarapi' } : simulated('blue');
+    market.ccl  = ccl  ? { value: ccl.venta,   change: ccl.variacion   || 0, source: 'dolarapi' } : simulated('ccl');
+  } else {
+    market.blue = simulated('blue');
+    market.ccl  = simulated('ccl');
+  }
+
+  // Cualquier clave que haya fallado → simulada
+  for (const key of [...Object.keys(YAHOO_SYMBOLS), 'blue', 'ccl']) {
+    if (!market[key]) market[key] = simulated(key);
+  }
+
+  res.setHeader('Cache-Control', 's-maxage=25, stale-while-revalidate=30');
+  return res.status(200).json({ market, ts: Date.now() });
 }
