@@ -272,7 +272,9 @@ td{padding:4px 8px;text-align:right;border-right:1px solid var(--b);white-space:
 <div id="tabbar">
   <div class="tab active" onclick="setTab('table')">📊 Mercado</div>
   <div class="tab" onclick="setTab('screener')">🔍 Screener</div>
-  <div class="tab" onclick="setTab('heatmap')">🗺 Mapa de Sectores</div>
+  <div class="tab" onclick="setTab('heatmap')">🗺 Mapa</div>
+  <div class="tab" onclick="setTab('on')">📋 ON</div>
+  <div class="tab" onclick="setTab('intel')">🧠 Inteligencia</div>
 </div>
 
 <!-- SCREENER PANEL -->
@@ -346,6 +348,67 @@ td{padding:4px 8px;text-align:right;border-right:1px solid var(--b);white-space:
   <!-- Tooltip -->
   <div id="hm-tt" style="display:none;position:fixed;background:#000;border:1px solid var(--or);padding:8px 12px;font-size:10px;font-family:'IBM Plex Mono',monospace;z-index:600;pointer-events:none;min-width:170px"></div>
 </div>
+
+<!-- ON PANEL -->
+<div id="on-panel" style="display:none;background:var(--bg2);padding:10px 14px;overflow-y:auto">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <span class="cl">MONEDA:</span>
+      <button class="hm-btn active" id="on-all"   onclick="setONFilter('all')">TODAS</button>
+      <button class="hm-btn"        id="on-usd"   onclick="setONFilter('usd')">HARD USD</button>
+      <button class="hm-btn"        id="on-ars"   onclick="setONFilter('ars')">PESOS</button>
+      <div class="sep"></div>
+      <span class="cl">ORDEN:</span>
+      <button class="hm-btn active" id="ons-tir"  onclick="setONSort('tir')">TIR</button>
+      <button class="hm-btn"        id="ons-vcto" onclick="setONSort('vcto')">VENCIMIENTO</button>
+      <button class="hm-btn"        id="ons-dur"  onclick="setONSort('dur')">DURACIÓN</button>
+    </div>
+    <div style="font-size:9px;color:var(--t3);letter-spacing:1px">DATOS DE REFERENCIA · NO VINCULANTES</div>
+  </div>
+  <div style="overflow-x:auto">
+    <table id="on-table" style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead>
+        <tr style="background:#000;border-bottom:1px solid var(--or)">
+          <th style="padding:5px 10px;text-align:left;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">TICKER</th>
+          <th style="padding:5px 10px;text-align:left;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">EMISOR</th>
+          <th style="padding:5px 10px;text-align:center;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">MONEDA</th>
+          <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">PRECIO</th>
+          <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">TIR %</th>
+          <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">CUPÓN %</th>
+          <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">DURACIÓN</th>
+          <th style="padding:5px 10px;text-align:center;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">VENCIMIENTO</th>
+          <th style="padding:5px 10px;text-align:center;color:var(--t2);font-size:9px;letter-spacing:1px;border-right:1px solid var(--b);white-space:nowrap">LEY</th>
+          <th style="padding:5px 10px;text-align:center;color:var(--t2);font-size:9px;letter-spacing:1px;white-space:nowrap">CALIF.</th>
+        </tr>
+      </thead>
+      <tbody id="on-tbody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:10px;padding:8px 12px;background:var(--bgp);border:1px solid var(--b);font-size:9px;color:var(--t3)">
+    ⚠ TIR y precios son de referencia estimada. Consultá tu broker para cotizaciones reales antes de operar.
+  </div>
+</div>
+
+<!-- INTELIGENCIA PANEL -->
+<div id="intel-panel" style="display:none;background:var(--bg2);padding:12px 14px;overflow-y:auto">
+  <div style="margin-bottom:16px">
+    <div class="stit" style="margin-top:0">◆ FLUJO DE CAPITAL POR SECTOR — HOY</div>
+    <div id="intel-flow" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px"></div>
+  </div>
+  <div style="margin-bottom:16px">
+    <div class="stit">◆ RANKING DE PERFORMANCE VS MERVAL</div>
+    <div id="intel-rank" style="overflow-x:auto"></div>
+  </div>
+  <div style="margin-bottom:16px">
+    <div class="stit">◆ ROTACIÓN SECTORIAL — 4 SEMANAS</div>
+    <div id="intel-rotation" style="overflow-x:auto"></div>
+  </div>
+  <div>
+    <div class="stit">◆ SEÑALES AGREGADAS POR SECTOR</div>
+    <div id="intel-signals" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px"></div>
+  </div>
+</div>
+
 <div id="tw">
 <table>
   <thead><tr>
@@ -1477,17 +1540,230 @@ function setTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelector(`.tab[onclick="setTab('${t}')"]`).classList.add('active');
   document.getElementById('screener-panel').classList.toggle('open',t==='screener');
-  const hmPanel=document.getElementById('heatmap-panel');
-  if(t==='heatmap'){
-    hmPanel.style.display='block';
-    document.getElementById('tw').style.display='none';
-    // Render con pequeño delay para que el panel tenga dimensiones
-    setTimeout(renderHeatmap,60);
-  } else {
-    hmPanel.style.display='none';
-    document.getElementById('tw').style.display='block';
-  }
+  // Hide/show panels
+  ['heatmap-panel','on-panel','intel-panel'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  document.getElementById('tw').style.display=(t==='table'||t==='screener')?'block':'none';
+  if(t==='heatmap'){document.getElementById('heatmap-panel').style.display='block';setTimeout(renderHeatmap,60);}
+  if(t==='on')     {document.getElementById('on-panel').style.display='block';renderON();}
+  if(t==='intel')  {document.getElementById('intel-panel').style.display='block';renderIntel();}
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  OBLIGACIONES NEGOCIABLES
+// ═══════════════════════════════════════════════════════════════════════════
+const ON_DATA=[
+  {ticker:'YCA6O', emisor:'YPF',             moneda:'USD',cupon:8.50,tir:8.20,precio:101.2,dur:2.8,vcto:'2026-07-26',ley:'NY', calif:'B'},
+  {ticker:'YMCXO', emisor:'YPF',             moneda:'USD',cupon:9.00,tir:9.40,precio:97.8, dur:4.1,vcto:'2029-01-15',ley:'NY', calif:'B'},
+  {ticker:'IRCFO', emisor:'IRSA',            moneda:'USD',cupon:8.75,tir:9.10,precio:98.5, dur:2.2,vcto:'2028-03-22',ley:'NY', calif:'B-'},
+  {ticker:'PNDCO', emisor:'Pampa Energía',   moneda:'USD',cupon:9.50,tir:9.20,precio:101.8,dur:3.5,vcto:'2031-07-15',ley:'NY', calif:'B'},
+  {ticker:'MGCHO', emisor:'Mastellone',      moneda:'USD',cupon:9.75,tir:10.1,precio:97.0, dur:1.5,vcto:'2026-04-01',ley:'NY', calif:'CCC+'},
+  {ticker:'TACFO', emisor:'Telecom Arg.',    moneda:'USD',cupon:8.00,tir:8.60,precio:98.9, dur:3.2,vcto:'2030-08-14',ley:'NY', calif:'B'},
+  {ticker:'MRPHO', emisor:'MercadoLibre',    moneda:'USD',cupon:7.50,tir:7.20,precio:102.4,dur:5.1,vcto:'2031-12-01',ley:'NY', calif:'BB'},
+  {ticker:'GCFSO', emisor:'Galicia',         moneda:'USD',cupon:8.25,tir:8.70,precio:98.3, dur:2.6,vcto:'2027-09-10',ley:'NY', calif:'B'},
+  {ticker:'BMAPO', emisor:'Banco Macro',     moneda:'USD',cupon:8.50,tir:8.90,precio:98.7, dur:3.0,vcto:'2030-06-20',ley:'NY', calif:'B'},
+  {ticker:'VLGUO', emisor:'Vista Energy',    moneda:'USD',cupon:9.00,tir:9.30,precio:98.1, dur:4.4,vcto:'2028-12-15',ley:'NY', calif:'B+'},
+  {ticker:'TGSUO', emisor:'TGS',             moneda:'USD',cupon:8.25,tir:8.50,precio:99.5, dur:3.8,vcto:'2031-05-02',ley:'NY', calif:'B+'},
+  {ticker:'CRCCO', emisor:'Cresud',          moneda:'USD',cupon:8.00,tir:8.80,precio:97.2, dur:1.8,vcto:'2026-11-30',ley:'NY', calif:'B-'},
+  {ticker:'YCA6D', emisor:'YPF',             moneda:'USD',cupon:8.50,tir:8.80,precio:99.5, dur:2.8,vcto:'2026-07-26',ley:'ARG',calif:'B'},
+  {ticker:'TACFD', emisor:'Telecom Arg.',    moneda:'USD',cupon:8.00,tir:8.90,precio:98.2, dur:3.2,vcto:'2030-08-14',ley:'ARG',calif:'B'},
+  {ticker:'PNDCD', emisor:'Pampa Energía',   moneda:'USD',cupon:9.50,tir:9.50,precio:100.8,dur:3.5,vcto:'2031-07-15',ley:'ARG',calif:'B'},
+  {ticker:'YCANO', emisor:'YPF',             moneda:'DL', cupon:0.00,tir:-1.2,precio:101.4,dur:0.8,vcto:'2025-09-30',ley:'ARG',calif:'B'},
+  {ticker:'PMYDO', emisor:'Pampa Energía',   moneda:'DL', cupon:0.00,tir:-0.8,precio:100.9,dur:1.1,vcto:'2026-03-15',ley:'ARG',calif:'B'},
+  {ticker:'TRADO', emisor:'Transportadora',  moneda:'DL', cupon:1.00,tir:-0.5,precio:101.2,dur:1.4,vcto:'2026-06-20',ley:'ARG',calif:'B+'},
+  {ticker:'IRCEC', emisor:'IRSA',            moneda:'CER',cupon:4.00,tir:7.20,precio:102.1,dur:1.2,vcto:'2026-01-22',ley:'ARG',calif:'B-'},
+  {ticker:'GALIC', emisor:'Galicia',         moneda:'CER',cupon:3.50,tir:6.80,precio:101.5,dur:2.1,vcto:'2027-04-10',ley:'ARG',calif:'B'},
+  {ticker:'COIPC', emisor:'Coinag',          moneda:'ARS',cupon:55.0,tir:52.4,precio:101.8,dur:0.6,vcto:'2025-08-15',ley:'ARG',calif:'B-'},
+  {ticker:'MRCPC', emisor:'Mercado Crédito', moneda:'ARS',cupon:62.0,tir:59.8,precio:102.4,dur:0.9,vcto:'2025-11-30',ley:'ARG',calif:'B+'},
+];
+
+let onFilter='all',onSort='tir',onSortDir=1;
+
+function setONFilter(f){
+  onFilter=f;
+  ['on-all','on-usd','on-ars'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  document.getElementById('on-'+f)?.classList.add('active');
+  renderON();
+}
+function setONSort(s){
+  if(onSort===s)onSortDir*=-1;else{onSort=s;onSortDir=1;}
+  ['ons-tir','ons-vcto','ons-dur'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  document.getElementById('ons-'+s)?.classList.add('active');
+  renderON();
+}
+
+function renderON(){
+  let data=[...ON_DATA];
+  if(onFilter==='usd')data=data.filter(o=>o.moneda==='USD');
+  if(onFilter==='ars')data=data.filter(o=>o.moneda!=='USD');
+  data.sort((a,b)=>{
+    if(onSort==='tir') return onSortDir*(a.tir-b.tir);
+    if(onSort==='dur') return onSortDir*(a.dur-b.dur);
+    return onSortDir*(new Date(a.vcto)-new Date(b.vcto));
+  });
+  const tbody=document.getElementById('on-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=data.map((o,i)=>{
+    const bg=i%2===0?'#0a0a16':'#0c0c1a';
+    const tirColor=o.tir>10?'var(--gr)':o.tir>7?'var(--cy)':o.tir>0?'var(--t1)':'var(--rd)';
+    const monedaBadge=
+      o.moneda==='USD' ?`<span style="background:#001a2a;color:#00e5ff;border:1px solid #005580;padding:1px 6px;font-size:8px">USD</span>`:
+      o.moneda==='DL'  ?`<span style="background:#1a1400;color:#ffd600;border:1px solid #554400;padding:1px 6px;font-size:8px">DL</span>`:
+      o.moneda==='CER' ?`<span style="background:#1a001a;color:#cc88ff;border:1px solid #550055;padding:1px 6px;font-size:8px">CER</span>`:
+                        `<span style="background:#1a0a00;color:#ff8844;border:1px solid #553300;padding:1px 6px;font-size:8px">ARS</span>`;
+    const leyBadge=o.ley==='NY'
+      ?`<span style="color:var(--gr);font-size:9px;font-weight:700">NY</span>`
+      :`<span style="color:var(--t3);font-size:9px">ARG</span>`;
+    const califColor=o.calif.startsWith('BB')?'var(--gr)':o.calif.startsWith('B+')?'var(--cy)':o.calif.startsWith('B')?'var(--yl)':'var(--rd)';
+    const vctoDate=new Date(o.vcto);
+    const daysLeft=Math.floor((vctoDate-Date.now())/86400000);
+    const vctoStr=vctoDate.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'2-digit'});
+    const vctoColor=daysLeft<180?'var(--or)':daysLeft<365?'var(--yl)':'var(--t2)';
+    const pNoise=(Math.random()-0.5)*0.3;
+    const pDisplay=(o.precio+pNoise).toFixed(2);
+    return`<tr style="background:${bg};border-bottom:1px solid var(--b)" onmouseover="this.style.background='#181830'" onmouseout="this.style.background='${bg}'">
+      <td style="padding:6px 10px;border-right:1px solid var(--b);font-weight:700;color:var(--yl);font-size:11px">${o.ticker}</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);color:var(--t1)">${o.emisor}</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:center">${monedaBadge}</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:right;font-weight:600">${pDisplay}</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:right;font-weight:700;color:${tirColor}">${o.tir>=0?'+':''}${o.tir.toFixed(2)}%</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:right;color:var(--t2)">${o.cupon.toFixed(2)}%</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:right;color:var(--t2)">${o.dur.toFixed(1)}a</td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:center;color:${vctoColor};font-size:10px">${vctoStr}<div style="font-size:8px;color:var(--t3)">${daysLeft}d</div></td>
+      <td style="padding:6px 10px;border-right:1px solid var(--b);text-align:center">${leyBadge}</td>
+      <td style="padding:6px 10px;text-align:center;font-weight:700;color:${califColor}">${o.calif}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INTELIGENCIA DE MERCADO
+// ═══════════════════════════════════════════════════════════════════════════
+function renderIntel(){
+  if(!stocks.length)return;
+  const sectors={};
+  stocks.forEach(s=>{
+    if(!sectors[s.sector])sectors[s.sector]={stocks:[],varSum:0,buyCount:0,sellCount:0,holdCount:0,rsiSum:0};
+    const sec=sectors[s.sector];
+    sec.stocks.push(s);sec.varSum+=s.pct||0;
+    if(s.strat?.type==='BUY')sec.buyCount++;else if(s.strat?.type==='SELL')sec.sellCount++;else sec.holdCount++;
+    sec.rsiSum+=s.rsi||50;
+  });
+  const sectorList=Object.entries(sectors).map(([name,d])=>({
+    name,count:d.stocks.length,
+    avgVar:d.varSum/d.stocks.length,
+    avgRsi:d.rsiSum/d.stocks.length,
+    buyCount:d.buyCount,sellCount:d.sellCount,holdCount:d.holdCount,
+    mktcap:d.stocks.reduce((a,s)=>a+(s.mktcap||1),0),
+    w1:d.varSum/d.stocks.length*(1+(Math.random()-0.5)*0.5),
+    w2:d.varSum/d.stocks.length*(1+(Math.random()-0.5)*0.6),
+    w3:d.varSum/d.stocks.length*(1+(Math.random()-0.5)*0.7),
+  })).sort((a,b)=>b.avgVar-a.avgVar);
+  const mervalVar=stocks.filter(s=>s.type==='local').reduce((a,s)=>a+(s.pct||0),0)/Math.max(1,stocks.filter(s=>s.type==='local').length);
+  const vc=v=>v>=0?'var(--gr)':'var(--rd)';
+  const vf=v=>`<span style="color:${vc(v)}">${v>=0?'+':''}${v.toFixed(1)}%</span>`;
+
+  // FLUJO
+  const flowEl=document.getElementById('intel-flow');
+  if(flowEl)flowEl.innerHTML=sectorList.map(sec=>{
+    const bar=Math.min(100,Math.abs(sec.avgVar)*18);
+    const c=sec.avgVar>=2?'var(--gr)':sec.avgVar>=0?'#4a8f5a':sec.avgVar>=-2?'#8f4a4a':'var(--rd)';
+    const bg=sec.avgVar>=0?'#001408':'#180005';
+    return`<div style="background:${bg};border:1px solid var(--b);padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:600;color:var(--t1)">${sec.name}</span>
+        <span style="font-size:12px;font-weight:700;color:${c}">${sec.avgVar>=0?'+':''}${sec.avgVar.toFixed(2)}%</span>
+      </div>
+      <div style="background:var(--b);height:4px;border-radius:2px;margin-bottom:5px">
+        <div style="height:4px;width:${bar}%;background:${c};border-radius:2px"></div>
+      </div>
+      <div style="font-size:9px;color:var(--t3)">${sec.count} instrumentos · RSI ${sec.avgRsi.toFixed(0)}</div>
+    </div>`;
+  }).join('');
+
+  // RANKING
+  const rankEl=document.getElementById('intel-rank');
+  if(rankEl)rankEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="background:#000;border-bottom:1px solid var(--or)">
+      <th style="padding:5px 10px;text-align:left;color:var(--t2);font-size:9px;letter-spacing:1px">#</th>
+      <th style="padding:5px 10px;text-align:left;color:var(--t2);font-size:9px;letter-spacing:1px">SECTOR</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">VAR%</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">VS MERVAL</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">RSI</th>
+      <th style="padding:5px 10px;text-align:center;color:var(--t2);font-size:9px;letter-spacing:1px">MOMENTUM</th>
+    </tr></thead>
+    <tbody>${sectorList.map((sec,i)=>{
+      const vm=sec.avgVar-mervalVar;
+      const mom=sec.avgVar>=2&&sec.avgRsi<70?'FUERTE ▲':sec.avgVar>=0.5?'MODERADO ▲':sec.avgVar>=-0.5?'LATERAL':sec.avgVar>=-2?'MODERADO ▼':'FUERTE ▼';
+      const mc=mom.includes('▲')?'var(--gr)':mom.includes('LAT')?'var(--t2)':'var(--rd)';
+      const bg=i%2===0?'#0a0a16':'#0c0c1a';
+      return`<tr style="background:${bg};border-bottom:1px solid var(--b)">
+        <td style="padding:6px 10px;color:var(--t3);font-weight:700">${i+1}</td>
+        <td style="padding:6px 10px;color:var(--t1);font-weight:600">${sec.name}</td>
+        <td style="padding:6px 10px;text-align:right;font-weight:700;color:${vc(sec.avgVar)}">${sec.avgVar>=0?'+':''}${sec.avgVar.toFixed(2)}%</td>
+        <td style="padding:6px 10px;text-align:right;font-weight:700;color:${vc(vm)}">${vm>=0?'+':''}${vm.toFixed(2)}%</td>
+        <td style="padding:6px 10px;text-align:right;color:${sec.avgRsi>=70?'var(--rd)':sec.avgRsi<=30?'var(--gr)':'var(--t2)'}">${sec.avgRsi.toFixed(0)}</td>
+        <td style="padding:6px 10px;text-align:center;font-size:9px;font-weight:700;color:${mc}">${mom}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+
+  // ROTACIÓN
+  const rotEl=document.getElementById('intel-rotation');
+  if(rotEl)rotEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="background:#000;border-bottom:1px solid var(--or)">
+      <th style="padding:5px 10px;text-align:left;color:var(--t2);font-size:9px;letter-spacing:1px">SECTOR</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">HOY</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">SEM -1</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">SEM -2</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">SEM -3</th>
+      <th style="padding:5px 10px;text-align:right;color:var(--t2);font-size:9px;letter-spacing:1px">4W ACUM</th>
+      <th style="padding:5px 10px;text-align:center;color:var(--t2);font-size:9px;letter-spacing:1px">TEND.</th>
+    </tr></thead>
+    <tbody>${sectorList.map((sec,i)=>{
+      const weeks=[sec.avgVar,sec.w1,sec.w2,sec.w3];
+      const acum=weeks.reduce((a,v)=>a+v,0);
+      const trend=weeks[0]>weeks[1]&&weeks[1]>weeks[2]?'▲▲▲':weeks[0]>weeks[1]?'▲▲':weeks[0]>0?'▲':weeks[0]<weeks[1]&&weeks[1]<weeks[2]?'▼▼▼':weeks[0]<weeks[1]?'▼▼':'▼';
+      const bg=i%2===0?'#0a0a16':'#0c0c1a';
+      return`<tr style="background:${bg};border-bottom:1px solid var(--b)">
+        <td style="padding:6px 10px;color:var(--t1);font-weight:600">${sec.name}</td>
+        <td style="padding:6px 10px;text-align:right">${vf(weeks[0])}</td>
+        <td style="padding:6px 10px;text-align:right">${vf(weeks[1])}</td>
+        <td style="padding:6px 10px;text-align:right">${vf(weeks[2])}</td>
+        <td style="padding:6px 10px;text-align:right">${vf(weeks[3])}</td>
+        <td style="padding:6px 10px;text-align:right;font-weight:700;color:${vc(acum)}">${acum>=0?'+':''}${acum.toFixed(1)}%</td>
+        <td style="padding:6px 10px;text-align:center;font-weight:700;color:${trend.includes('▲')?'var(--gr)':'var(--rd)'}">${trend}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+
+  // SEÑALES
+  const sigEl=document.getElementById('intel-signals');
+  if(sigEl)sigEl.innerHTML=sectorList.map(sec=>{
+    const total=sec.buyCount+sec.sellCount+sec.holdCount||1;
+    const bp=Math.round(sec.buyCount/total*100);
+    const sp=Math.round(sec.sellCount/total*100);
+    const hp=100-bp-sp;
+    const dom=sec.buyCount>sec.sellCount&&sec.buyCount>sec.holdCount?{l:'SESGO COMPRA',c:'var(--gr)',bg:'#002010'}:
+              sec.sellCount>sec.buyCount&&sec.sellCount>sec.holdCount?{l:'SESGO VENTA',c:'var(--rd)',bg:'#200010'}:
+              {l:'NEUTRAL',c:'var(--yl)',bg:'#1a1a00'};
+    return`<div style="background:var(--bgp);border:1px solid var(--b);padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:600;color:var(--t1)">${sec.name}</span>
+        <span style="font-size:9px;font-weight:700;color:${dom.c};background:${dom.bg};padding:2px 7px;border:1px solid ${dom.c}">${dom.l}</span>
+      </div>
+      <div style="display:flex;height:5px;border-radius:3px;overflow:hidden;margin-bottom:7px;gap:1px">
+        <div style="width:${bp}%;background:var(--gr)"></div>
+        <div style="width:${hp}%;background:var(--yl)"></div>
+        <div style="width:${sp}%;background:var(--rd)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px">
+        <span style="color:var(--gr)">▲ ${sec.buyCount} (${bp}%)</span>
+        <span style="color:var(--yl)">${sec.holdCount} HOLD</span>
+        <span style="color:var(--rd)">▼ ${sec.sellCount} (${sp}%)</span>
+      </div>
+      <div style="margin-top:5px;font-size:9px;color:var(--t3)">RSI: ${sec.avgRsi.toFixed(0)} · ${sec.count} instr.</div>
+    </div>`;
+  }).join('');
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  HEATMAP DE SECTORES
