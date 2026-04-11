@@ -197,6 +197,11 @@ td{padding:4px 8px;text-align:right;border-right:1px solid var(--b);white-space:
 .scr-card{background:var(--bgp);border:1px solid var(--b);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
 .scr-card:hover{border-color:var(--or)}
 .scr-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+/* HEATMAP */
+.hm-btn{font-size:9px;padding:3px 10px;border:1px solid var(--bB);background:var(--bgp);color:var(--t2);cursor:pointer;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;transition:all .15s}
+.hm-btn:hover{border-color:var(--or);color:var(--t1)}
+.hm-btn.active{border-color:var(--or);color:var(--or);background:#1a0a00}
+.hm-cell{cursor:pointer}
 </style>
 </head>
 <body style="display:flex;flex-direction:column;height:100vh">
@@ -267,6 +272,7 @@ td{padding:4px 8px;text-align:right;border-right:1px solid var(--b);white-space:
 <div id="tabbar">
   <div class="tab active" onclick="setTab('table')">📊 Mercado</div>
   <div class="tab" onclick="setTab('screener')">🔍 Screener</div>
+  <div class="tab" onclick="setTab('heatmap')">🗺 Mapa de Sectores</div>
 </div>
 
 <!-- SCREENER PANEL -->
@@ -319,7 +325,27 @@ td{padding:4px 8px;text-align:right;border-right:1px solid var(--b);white-space:
   <div class="scr-results" id="scr-results">Seleccioná filtros para ver resultados del screener.</div>
 </div>
 
-<!-- TABLE -->
+<!-- HEATMAP PANEL -->
+<div id="heatmap-panel" style="display:none;background:var(--bg2);border-bottom:1px solid var(--b);padding:12px 14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span style="font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;align-self:center;margin-right:4px">COLOR:</span>
+      <button class="hm-btn active" id="hm-var" onclick="setHMMode('variation')">VARIACIÓN</button>
+      <button class="hm-btn" id="hm-rsi" onclick="setHMMode('rsi')">RSI</button>
+      <button class="hm-btn" id="hm-sig" onclick="setHMMode('signal')">SEÑAL</button>
+      <div class="sep"></div>
+      <span style="font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;align-self:center;margin-right:4px">FILTRO:</span>
+      <button class="hm-btn active" id="hm-all" onclick="setHMFilter('all')">TODOS</button>
+      <button class="hm-btn" id="hm-loc" onclick="setHMFilter('local')">LOCALES</button>
+      <button class="hm-btn" id="hm-ced" onclick="setHMFilter('cedear')">CEDEARs</button>
+    </div>
+    <!-- Legend -->
+    <div id="hm-legend" style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--t2)"></div>
+  </div>
+  <div id="hm-container" style="width:100%;position:relative;cursor:crosshair"></div>
+  <!-- Tooltip -->
+  <div id="hm-tt" style="display:none;position:fixed;background:#000;border:1px solid var(--or);padding:8px 12px;font-size:10px;font-family:'IBM Plex Mono',monospace;z-index:600;pointer-events:none;min-width:170px"></div>
+</div>
 <div id="tw">
 <table>
   <thead><tr>
@@ -937,6 +963,8 @@ async function refresh(){
   document.getElementById('lupd').textContent='ÚLTIMA ACT: '+new Date().toLocaleTimeString('es-AR');
   countdown=30;
   document.getElementById('load').classList.remove('show');
+  // Re-render heatmap si está activo
+  if(document.getElementById('heatmap-panel').style.display==='block') renderHeatmap();
   if(document.getElementById('mov').classList.contains('open')&&cStock){
     const s=stocks.find(x=>x.ticker===cStock.ticker);
     if(s)drawChart(s,cTF);
@@ -1449,7 +1477,233 @@ function setTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelector(`.tab[onclick="setTab('${t}')"]`).classList.add('active');
   document.getElementById('screener-panel').classList.toggle('open',t==='screener');
+  const hmPanel=document.getElementById('heatmap-panel');
+  if(t==='heatmap'){
+    hmPanel.style.display='block';
+    document.getElementById('tw').style.display='none';
+    // Render con pequeño delay para que el panel tenga dimensiones
+    setTimeout(renderHeatmap,60);
+  } else {
+    hmPanel.style.display='none';
+    document.getElementById('tw').style.display='block';
+  }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HEATMAP DE SECTORES
+// ═══════════════════════════════════════════════════════════════════════════
+let hmMode='variation';   // 'variation' | 'rsi' | 'signal'
+let hmFilter='all';       // 'all' | 'local' | 'cedear'
+let hmAnimFrame;
+
+function setHMMode(m){
+  hmMode=m;
+  document.querySelectorAll('[id^=hm-var],[id^=hm-rsi],[id^=hm-sig]').forEach(b=>b.classList.remove('active'));
+  const map={variation:'hm-var',rsi:'hm-rsi',signal:'hm-sig'};
+  document.getElementById(map[m])?.classList.add('active');
+  renderHeatmap();
+}
+function setHMFilter(f){
+  hmFilter=f;
+  document.querySelectorAll('#hm-all,#hm-loc,#hm-ced').forEach(b=>b.classList.remove('active'));
+  const map={all:'hm-all',local:'hm-loc',cedear:'hm-ced'};
+  document.getElementById(map[f])?.classList.add('active');
+  renderHeatmap();
+}
+
+// Color por modo
+function hmColor(s){
+  if(hmMode==='rsi'){
+    if(s.rsi>=70) return{bg:'#3d0000',border:'#ff1744',text:'#ff6b6b',label:'OB '+s.rsi.toFixed(0)};
+    if(s.rsi<=30) return{bg:'#003d10',border:'#00c853',text:'#69f0ae',label:'OS '+s.rsi.toFixed(0)};
+    return{bg:'#0d0d1f',border:'#282845',text:'#8888aa',label:'RSI '+s.rsi.toFixed(0)};
+  }
+  if(hmMode==='signal'){
+    if(s.strat?.type==='BUY')  return{bg:'#002a10',border:'#00c853',text:'#69f0ae',label:'BUY'};
+    if(s.strat?.type==='SELL') return{bg:'#2a0010',border:'#ff1744',text:'#ff6b6b',label:'SELL'};
+    if(s.strat?.nearBuy)       return{bg:'#002a2a',border:'#00e5ff',text:'#00e5ff',label:'PROX↑'};
+    return{bg:'#1a1a00',border:'#555500',text:'#ffd600',label:'HOLD'};
+  }
+  // Variation mode (default)
+  const v=s.pct||0;
+  if(v>=3)  return{bg:'#003d18',border:'#00c853',text:'#69f0ae',label:'+'+v.toFixed(1)+'%'};
+  if(v>=1)  return{bg:'#002a10',border:'#00962e',text:'#00c853',label:'+'+v.toFixed(1)+'%'};
+  if(v>=0)  return{bg:'#101a12',border:'#1e3520',text:'#4a8f5a',label:'+'+v.toFixed(1)+'%'};
+  if(v>=-1) return{bg:'#1a1010',border:'#3d1515',text:'#c0001a',label:v.toFixed(1)+'%'};
+  if(v>=-3) return{bg:'#2a0808',border:'#c0001a',text:'#ff1744',label:v.toFixed(1)+'%'};
+  return      {bg:'#3d0000',border:'#ff1744',text:'#ff6b6b',label:v.toFixed(1)+'%'};
+}
+
+// Treemap layout — squarified
+function squarify(items,x,y,w,h){
+  const rects=[];
+  function tile(nodes,rx,ry,rw,rh){
+    if(!nodes.length) return;
+    if(nodes.length===1){rects.push({...nodes[0],x:rx+1,y:ry+1,w:Math.max(0,rw-2),h:Math.max(0,rh-2)});return;}
+    const total=nodes.reduce((s,n)=>s+n._area,0);
+    let acc=0,split=0;
+    const half=total/2;
+    for(let i=0;i<nodes.length;i++){acc+=nodes[i]._area;if(acc>=half){split=i+1;break;}}
+    if(!split)split=Math.floor(nodes.length/2)||1;
+    const a=nodes.slice(0,split),b=nodes.slice(split);
+    const ratioA=a.reduce((s,n)=>s+n._area,0)/total;
+    if(rw>=rh){
+      const wA=Math.round(ratioA*rw);
+      tile(a,rx,ry,wA,rh);tile(b,rx+wA,ry,rw-wA,rh);
+    } else {
+      const hA=Math.round(ratioA*rh);
+      tile(a,rx,ry,rw,hA);tile(b,rx,ry+hA,rw,rh-hA);
+    }
+  }
+  const total=items.reduce((s,n)=>s+n._area,0)||1;
+  const sorted=[...items].sort((a,b)=>b._area-a._area);
+  const scaled=sorted.map(n=>({...n,_area:n._area/total*w*h}));
+  tile(scaled,x,y,w,h);
+  return rects;
+}
+
+function renderHeatmap(){
+  if(!stocks.length) return;
+  const container=document.getElementById('hm-container');
+  const W=container.clientWidth||800;
+  const H=Math.max(340,Math.round(W*0.55));
+
+  // Filtrar stocks
+  let data=[...stocks];
+  if(hmFilter==='local')  data=data.filter(s=>s.type==='local');
+  if(hmFilter==='cedear') data=data.filter(s=>s.type==='cedear');
+
+  // Agrupar por sector
+  const sectorMap={};
+  data.forEach(s=>{
+    if(!sectorMap[s.sector])sectorMap[s.sector]=[];
+    sectorMap[s.sector].push(s);
+  });
+
+  // Area por sector = suma de mktcap
+  const sectorList=Object.entries(sectorMap).map(([name,stks])=>({
+    name,
+    _area:stks.reduce((a,s)=>a+(s.mktcap||1),0),
+    stocks:stks,
+  })).sort((a,b)=>b._area-a._area);
+
+  // Layout de sectores
+  const sRects=squarify(sectorList,0,0,W,H);
+
+  let svg=`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;border-radius:4px;overflow:hidden">`;
+
+  sRects.forEach(sr=>{
+    // Fondo de sector
+    svg+=`<rect x="${sr.x}" y="${sr.y}" width="${sr.w}" height="${sr.h}" fill="#080814" rx="0"/>`;
+
+    // Etiqueta del sector
+    const showSLabel=sr.w>80&&sr.h>30;
+    const sLabelH=showSLabel?18:0;
+
+    // Layout de stocks dentro del sector
+    const stockArea={
+      x:sr.x+1,y:sr.y+sLabelH+1,
+      w:Math.max(0,sr.w-2),h:Math.max(0,sr.h-sLabelH-2)
+    };
+
+    if(stockArea.w>4&&stockArea.h>4&&sr.stocks.length){
+      const stkItems=sr.stocks.map(s=>({...s,_area:s.mktcap||1}));
+      const stkRects=squarify(stkItems,stockArea.x,stockArea.y,stockArea.w,stockArea.h);
+
+      stkRects.forEach(stk=>{
+        const c=hmColor(stk);
+        const rw=Math.max(0,stk.w),rh=Math.max(0,stk.h);
+        if(rw<3||rh<3) return;
+
+        // Celda clickeable
+        svg+=`<g class="hm-cell" onclick="openModal('${stk.ticker}')" data-ticker="${stk.ticker}">`;
+        svg+=`<rect x="${stk.x}" y="${stk.y}" width="${rw}" height="${rh}" fill="${c.bg}" stroke="${c.border}" stroke-width="0.8" rx="2"/>`;
+
+        if(rw>30&&rh>18){
+          const fs=Math.min(12,Math.max(8,Math.floor(rw/6)));
+          const cx=stk.x+rw/2;
+          const cy=stk.y+rh/2;
+
+          // Ticker
+          svg+=`<text x="${cx}" y="${cy+(rh>30?-5:3)}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${c.text}" font-family="IBM Plex Mono,monospace">${stk.ticker}</text>`;
+
+          // Variación / RSI / señal
+          if(rh>30){
+            svg+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="${Math.max(8,fs-2)}" fill="${c.text}" font-family="IBM Plex Mono,monospace" opacity="0.85">${c.label}</text>`;
+          }
+        } else if(rw>16&&rh>12){
+          svg+=`<text x="${stk.x+rw/2}" y="${stk.y+rh/2+4}" text-anchor="middle" font-size="8" font-weight="700" fill="${c.text}" font-family="IBM Plex Mono,monospace">${stk.ticker}</text>`;
+        }
+        svg+=`</g>`;
+      });
+    }
+
+    // Etiqueta del sector encima
+    if(showSLabel){
+      svg+=`<rect x="${sr.x}" y="${sr.y}" width="${sr.w}" height="${sLabelH}" fill="rgba(0,0,0,0.5)"/>`;
+      svg+=`<text x="${sr.x+6}" y="${sr.y+13}" font-size="9" font-weight="600" fill="#8888aa" font-family="IBM Plex Mono,monospace" letter-spacing="1">${sr.name.toUpperCase()}</text>`;
+    }
+
+    // Borde del sector
+    svg+=`<rect x="${sr.x}" y="${sr.y}" width="${sr.w}" height="${sr.h}" fill="none" stroke="#000" stroke-width="2" rx="0"/>`;
+  });
+
+  svg+='</svg>';
+  container.innerHTML=svg;
+
+  // Hover tooltip
+  const tt=document.getElementById('hm-tt');
+  container.querySelectorAll('.hm-cell').forEach(el=>{
+    el.addEventListener('mouseenter',e=>{
+      const tk=el.dataset.ticker;
+      const s=stocks.find(x=>x.ticker===tk);
+      if(!s)return;
+      const pct=(s.pct||0);
+      const pctStr=(pct>=0?'+':'')+pct.toFixed(2)+'%';
+      const sigClass=s.strat?.type==='BUY'?'color:#00c853':s.strat?.type==='SELL'?'color:#ff1744':'color:#ffd600';
+      tt.innerHTML=`
+        <div style="color:var(--yl);font-weight:700;font-size:13px;letter-spacing:1px;margin-bottom:6px">${s.ticker} <span style="color:var(--t2);font-size:10px;font-weight:400">${s.name}</span></div>
+        <div style="display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:10px">
+          <span style="color:var(--t3)">Precio</span><span style="font-weight:700">$${fmt(s.price)}</span>
+          <span style="color:var(--t3)">Variación</span><span style="${pct>=0?'color:#00c853':'color:#ff1744'};font-weight:700">${pctStr}</span>
+          <span style="color:var(--t3)">RSI</span><span style="${s.rsi>=70?'color:#ff1744':s.rsi<=30?'color:#00c853':'color:#8888aa'}">${s.rsi?.toFixed(0)||'—'}</span>
+          <span style="color:var(--t3)">Señal</span><span style="${sigClass};font-weight:700">${s.strat?.nearBuy?'PROX.↑':s.strat?.type||'—'}</span>
+          <span style="color:var(--t3)">Sector</span><span style="color:var(--t2)">${s.sector}</span>
+          <span style="color:var(--t3)">Tipo</span><span style="color:var(--t2)">${s.type==='cedear'?'CEDEAR':'LOCAL'}${s.ratio?' · '+s.ratio:''}</span>
+        </div>
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--b);font-size:9px;color:var(--or);letter-spacing:1px">CLICK → VER ANÁLISIS COMPLETO</div>`;
+      tt.style.display='block';
+    });
+    el.addEventListener('mousemove',e=>{
+      const x=e.clientX,y=e.clientY;
+      const tw=180,th=140;
+      tt.style.left=(x+x>window.innerWidth-tw-20?-tw-10:14)+'px';
+      tt.style.top=Math.max(60,y-20)+'px';
+    });
+    el.addEventListener('mouseleave',()=>{tt.style.display='none';});
+  });
+
+  // Leyenda
+  const legends={
+    variation:[
+      {c:'#003d18',t:'>+3%'},{c:'#002a10',t:'+1%'},{c:'#101a12',t:'0%'},
+      {c:'#1a1010',t:'-1%'},{c:'#2a0808',t:'-3%'},{c:'#3d0000',t:'<-3%'},
+    ],
+    rsi:[
+      {c:'#003d10',t:'Sobreventa <30'},{c:'#0d0d1f',t:'Neutro 30-70'},{c:'#3d0000',t:'Sobrecompra >70'},
+    ],
+    signal:[
+      {c:'#002a10',t:'BUY'},{c:'#002a2a',t:'PROX.↑'},{c:'#1a1a00',t:'HOLD'},{c:'#2a0010',t:'SELL'},
+    ],
+  };
+  const leg=legends[hmMode]||legends.variation;
+  document.getElementById('hm-legend').innerHTML=
+    leg.map(l=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:${l.c};border-radius:2px;border:1px solid rgba(255,255,255,.15);display:inline-block"></span><span>${l.t}</span></span>`).join('');
+}
+
+// Re-render heatmap al actualizar precios si está activo
+const _origRefresh=refresh;
+// Heatmap se actualiza automáticamente porque usa el array `stocks` global
 
 // ── EVENT LISTENERS ──────────────────────────────────────────────────────────
 document.getElementById('tfg').addEventListener('click',e=>{
@@ -1504,6 +1758,10 @@ document.addEventListener('keydown',e=>{
 
 window.addEventListener('resize',()=>{
   if(cStock&&document.getElementById('mov').classList.contains('open')&&currentMTab==='chart')drawChart(cStock,cTF);
+  if(document.getElementById('heatmap-panel').style.display==='block'){
+    cancelAnimationFrame(hmAnimFrame);
+    hmAnimFrame=requestAnimationFrame(renderHeatmap);
+  }
 });
 
 setInterval(updClock,1000);
